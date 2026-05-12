@@ -115,30 +115,43 @@ Replace this template guidance with your actual phase list when you:
 
 ---
 
-## Template replacement
-
-When starting your project, replace the content below this line with your actual implementation phase list.
-
----
-
 ## Active implementation phases
 
-Development is organised into [X] sequential phases. Each phase includes scope, acceptance criteria, testing strategy, and PR workflow.
+Development is organised into eight sequential phases mapped to three shippable milestones. Each phase includes scope, acceptance criteria, testing strategy, and PR workflow.
 
-**Current phase:** [Phase number and name]
+**Current phase:** Phase 1 — Foundation (not yet started).
 
-### Phase files (work through in order)
+### v0.1 — Anonymous play
 
-1. **[01-phase-name.md](./01-phase-name.md)** - [Timeframe]
-   [Brief description of what this phase builds]
+1. **[01-foundation.md](./01-foundation.md)** — 3–5 days
+   Worker + Vite + D1 + KV scaffolding. Production domain `hnefatafl.hultberg.org` live with placeholder page. No game logic.
 
-2. **[02-phase-name.md](./02-phase-name.md)** - [Timeframe]
-   [Brief description of what this phase builds]
+2. **[02-game-engine-and-ai.md](./02-game-engine-and-ai.md)** — 5–8 days
+   Pure-TypeScript engine + AI in `src/shared/game/`. 100%-tested. Includes replay parity tests against the prototype.
 
-3. **[03-phase-name.md](./03-phase-name.md)** - [Timeframe]
-   [Brief description of what this phase builds]
+3. **[03-3d-board-and-gameplay-loop.md](./03-3d-board-and-gameplay-loop.md)** — 7–10 days
+   3D board, gameplay loop, menu/game/rules/privacy pages, anonymous-games counter. **v0.1 ships at the end of this phase.**
 
-[Continue numbering phases...]
+### v0.2 — Accounts
+
+4. **[04-d1-schema-and-anonymous-stats.md](./04-d1-schema-and-anonymous-stats.md)** — *stub spec*
+   D1 schema (`game_results`, `leaderboard_profiles`, `site_stats`). Migrate anonymous counter from KV to D1.
+
+5. **[05-magic-link-auth.md](./05-magic-link-auth.md)** — *stub spec*
+   Magic-link sign-in, `Emailer` interface with two providers, per-user game results. **v0.2 ships at the end of this phase.**
+
+### v1.0 — Full game
+
+6. **[06-leaderboard-and-profile.md](./06-leaderboard-and-profile.md)** — *stub spec*
+   Leaderboard page, profile page with donut chart.
+
+7. **[07-r2-textured-pieces.md](./07-r2-textured-pieces.md)** — *stub spec*
+   R2-hosted textured piece style with GLSL shader.
+
+8. **[08-admin-and-contact.md](./08-admin-and-contact.md)** — *stub spec*
+   Admin panel, contact form, Turnstile, final feature-parity sweep. **v1.0 ships at the end of this phase.**
+
+**Stub specs (Phases 4–8)** are intentionally light. Each gets re-drafted in full using [`00-TEMPLATE-phase.md`](./00-TEMPLATE-phase.md) when its turn comes — details would go stale before then.
 
 ### Supporting documentation
 

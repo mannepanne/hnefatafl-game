@@ -2,12 +2,6 @@
 
 Navigation index and quick reference for working with this project.
 
----
-
-**⚠️ THIS IS A TEMPLATE** - Replace this entire file with your project-specific content when starting a new project. Use the sections below as a guide for what to include.
-
----
-
 ## Rules of engagement
 
 Collaboration principles and ways of working: @.claude/CLAUDE.md
@@ -15,68 +9,76 @@ When asked to remember anything, add project memory in this CLAUDE.md (project r
 
 ## Project overview
 
-**[PROJECT NAME]** - [One sentence description of what this project does]
+**Hnefatafl game** — a faithful port of an existing Hnefatafl prototype to a pure Cloudflare stack. Single-player browser game; you play Copenhagen-ruleset 11×11 Hnefatafl against an AI with three difficulty levels.
 
-**[Optional: Name inspiration or meaningful context about the project name]**
+**Hnefatafl** ("king's table") is a Viking-age asymmetric board game. The defender side controls a king + twelve men starting in the centre, trying to get the king to one of four corners. The attacker side controls twenty-four men starting on the edges, trying to capture the king first.
 
 **Core workflow:**
-1. [Key user action or process step 1]
-2. [Key user action or process step 2]
-3. [Key user action or process step 3]
-4. [Key user action or process step 4]
+1. Pick a side (defender or attacker) and a difficulty (Thrall, Karl, or Jarl).
+2. Play a full game against the AI on a 3D board.
+3. See the result (winner, duration, move count).
+4. From v0.2 onward: optionally sign in with a magic link to track personal stats.
 
-**Full specification:** [Link to master spec in SPECIFICATIONS/ORIGINAL_IDEA/]
+**Full specification:** [SPECIFICATIONS/ORIGINAL_IDEA/project-outline.md](./SPECIFICATIONS/ORIGINAL_IDEA/project-outline.md)
+**Prototype source:** [SPECIFICATIONS/ORIGINAL_IDEA/ClaudeShipSource/](./SPECIFICATIONS/ORIGINAL_IDEA/ClaudeShipSource/) — design source of truth for game behaviour and visuals.
 
 ## Architecture overview
 
 **Stack:**
-- **Framework**: [e.g., Next.js 14+, Django, FastAPI, etc.]
-- **Styling**: [e.g., Tailwind CSS, styled-components, etc.]
-- **Database**: [e.g., Supabase, PostgreSQL, MongoDB, etc.]
-- **Email**: [e.g., Resend, SendGrid, etc. - if applicable]
-- **Deployment**: [e.g., Cloudflare Workers, Vercel, AWS, etc.]
-- **Domain**: [e.g., example.com or "TBD"]
+- **Framework:** Cloudflare Workers (Hono) + Vite + React 18 + TypeScript (strict)
+- **Styling:** Tailwind CSS + shadcn/ui, parchment palette, Cinzel + Cormorant Garamond fonts
+- **3D:** `@react-three/fiber` + `@react-three/drei` + `three`
+- **Database:** Cloudflare D1 (SQLite) + Drizzle ORM
+- **Object storage:** Cloudflare R2 (piece textures)
+- **Key-value:** Cloudflare KV (magic-link tokens, rate-limit buckets)
+- **Email:** Cloudflare Email Sending (beta), Resend on `hultberg.org` as fallback — see [ADR](./REFERENCE/decisions/2026-05-12-email-provider-abstraction.md)
+- **Bot protection:** Cloudflare Turnstile
+- **Package manager:** Bun
+- **Tests:** Vitest + `@cloudflare/vitest-pool-workers`
+- **Deploy:** Wrangler, single Worker (SPA + API on one deploy unit)
+- **Domain:** `hnefatafl.hultberg.org`
 
-**Key Integrations:**
-- [External API or service 1]
-- [External API or service 2]
-- [External API or service 3]
+**Key integrations:** none external. Everything runs on Cloudflare. See ADR [2026-05-12-cloudflare-only-stack.md](./REFERENCE/decisions/2026-05-12-cloudflare-only-stack.md).
 
-**Current Status:** [e.g., "Planning complete - ready to begin Phase 1", "In development - Phase 3", "Production ready"]
+**Current status:** Planning complete — ready to begin Phase 1 (Foundation).
 
 ## Implementation phases
 
-Development is organised into numbered phases with clear deliverables, testing requirements, and PR workflows.
+Eight phases mapped to three shippable milestones:
 
-1. [01-phase-name.md](./SPECIFICATIONS/01-phase-name.md) - [Brief description] ([Timeframe])
-2. [02-phase-name.md](./SPECIFICATIONS/02-phase-name.md) - [Brief description] ([Timeframe])
-3. [03-phase-name.md](./SPECIFICATIONS/03-phase-name.md) - [Brief description] ([Timeframe])
-4. [etc...]
+**v0.1 — Anonymous play**
+1. [01-foundation.md](./SPECIFICATIONS/01-foundation.md) — Worker + Vite + D1 + KV scaffolding, production domain live (3–5 days)
+2. [02-game-engine-and-ai.md](./SPECIFICATIONS/02-game-engine-and-ai.md) — Pure-TS engine + AI port with 100% test coverage (5–8 days)
+3. [03-3d-board-and-gameplay-loop.md](./SPECIFICATIONS/03-3d-board-and-gameplay-loop.md) — 3D board, gameplay loop, v0.1 ships (7–10 days)
 
-**Each phase includes:**
-- Clear scope and acceptance criteria
-- Testing strategy (target: 95%+ coverage)
-- Pre-commit checklist (tests, type-checking, manual verification)
-- PR workflow and review requirements
-- Technical considerations and edge cases
+**v0.2 — Accounts**
+4. [04-d1-schema-and-anonymous-stats.md](./SPECIFICATIONS/04-d1-schema-and-anonymous-stats.md) — D1 schema, anonymous counter migrated from KV (stub spec)
+5. [05-magic-link-auth.md](./SPECIFICATIONS/05-magic-link-auth.md) — Magic-link authentication, v0.2 ships (stub spec)
 
-**Current phase:** [Phase number and name]
+**v1.0 — Full game**
+6. [06-leaderboard-and-profile.md](./SPECIFICATIONS/06-leaderboard-and-profile.md) — Leaderboard + profile pages (stub spec)
+7. [07-r2-textured-pieces.md](./SPECIFICATIONS/07-r2-textured-pieces.md) — R2-hosted textured piece style (stub spec)
+8. [08-admin-and-contact.md](./SPECIFICATIONS/08-admin-and-contact.md) — Admin panel + contact form, v1.0 ships (stub spec)
+
+**Phases 4–8 are stubs.** They capture shape and dependencies; each gets re-drafted in full when its turn comes, using [`SPECIFICATIONS/00-TEMPLATE-phase.md`](./SPECIFICATIONS/00-TEMPLATE-phase.md).
+
+**Current phase:** Phase 1 (Foundation) — not yet started.
 
 ### SPECIFICATIONS/
-- **Implementation phases** (numbered files) - Active work-in-progress
-- **ORIGINAL_IDEA/** - Master spec, product vision, naming inspiration
-- **ARCHIVE/** - Completed specs (move here when phase complete)
+- Numbered phase files (active work-in-progress)
+- **ORIGINAL_IDEA/** — Master spec, prototype source, gamepiece textures
+- **ARCHIVE/** — Completed phase specs (move here once a phase ships)
 
 ### REFERENCE/
-How-it-works documentation for implemented features:
-- [testing-strategy.md](./REFERENCE/testing-strategy.md) - Testing philosophy and approach
-- [technical-debt.md](./REFERENCE/technical-debt.md) - Known issues and accepted risks
-- [environment-setup.md](./REFERENCE/environment-setup.md) - API keys and environment configuration
-- [troubleshooting.md](./REFERENCE/troubleshooting.md) - Common issues and solutions
-- [TEMPLATE-UPDATES/](./REFERENCE/TEMPLATE-UPDATES/) - Migration packets for rolling out template improvements to derivative projects
-- [Add project-specific reference docs as they're created]
+How-it-works documentation:
+- [testing-strategy.md](./REFERENCE/testing-strategy.md) — TDD workflow, coverage targets, Vitest pools
+- [technical-debt.md](./REFERENCE/technical-debt.md) — Known issues, accepted shortcuts
+- [environment-setup.md](./REFERENCE/environment-setup.md) — Cloudflare resource setup, secrets, Custom Domain
+- [troubleshooting.md](./REFERENCE/troubleshooting.md) — Common issues
+- [decisions/](./REFERENCE/decisions/) — Architecture Decision Records (ADRs)
+- [TEMPLATE-UPDATES/](./REFERENCE/TEMPLATE-UPDATES/) — Migration packets for template improvements
 
-*Note: Keep CLAUDE.md files short (<300 lines). Break details into separate reference files with succinct summaries. CLAUDE.md files work as "library index" to find context when needed, minimising token usage.*
+*Keep CLAUDE.md files short (<300 lines). Details belong in subdirectory files.*
 
 ## Code conventions
 
@@ -87,88 +89,79 @@ How-it-works documentation for implemented features:
 ```
 
 ### Naming
-- Descriptive names: [Provide project-specific examples]
-- TypeScript conventions: camelCase (variables), PascalCase (types)
-- Avoid temporal references: no "new", "improved", "old"
+- Descriptive names: e.g. `applyMove`, `getLegalMoves`, `evaluatePosition`, not `processBoard` or `handleStuff`.
+- TypeScript conventions: camelCase for variables/functions, PascalCase for types/components.
+- Avoid temporal references: no "new", "improved", "old".
 
 ### Comments
-- Evergreen (describe what code does, not recent changes)
-- Minimal (code should be self-documenting)
-- Explain complex logic and non-obvious decisions
+- Evergreen (describe what the code does, not how it evolved).
+- Minimal (code should be self-documenting).
+- Explain non-obvious decisions (e.g. "king edge immunity — see ClaudeShipSource/spec-game-engine.md").
 
 ## Development workflow
 
 **⚠️ CRITICAL: ALL CODE CHANGES REQUIRE A FEATURE BRANCH + PR ⚠️**
 
 **Step 0 (BEFORE making ANY changes):**
-- [ ] On feature branch (not main)?
-- [ ] If on main: create feature branch first
-
-**CRITICAL: ALL changes require feature branch + PR. NEVER work on main. Zero exceptions.**
+- [ ] On a feature branch (not main)?
+- [ ] If on main: create feature branch first.
 
 **Implementation steps:**
-1. Create feature branch (feature/, fix/, refactor/)
-2. Check SPECIFICATIONS/ for relevant specs
-3. Review spec with **`/review-spec`** before starting non-trivial features
-4. Implement with tests (run tests + type checking)
-5. Create PR for review:
-  - **`/review-pr`** - Smart dispatcher: triages the change and routes to light / standard / team (1–5 min end-to-end; longer when auto-escalated to team tier)
-  - **`/review-pr-team`** - Force team review, skip triage (2–7 min)
-  - **See:** [pr-review-workflow.md](./REFERENCE/pr-review-workflow.md)
+1. Create feature branch (`feature/`, `fix/`, `refactor/`).
+2. Check `SPECIFICATIONS/` for the relevant phase spec.
+3. Review the spec with `/review-spec` before starting non-trivial work.
+4. Implement with tests (run tests + type checking continuously).
+5. Create a PR for review:
+   - `/review-pr` — dispatcher, triages to light/standard/team (1–5 min, longer if escalated)
+   - `/review-pr-team` — force team review, skip triage (2–7 min)
+   - See [pr-review-workflow.md](./REFERENCE/pr-review-workflow.md)
 
 ## TypeScript configuration
 
-[Customise based on your project]
-- Target: [e.g., ESNext, ES2022, etc.]
-- Strict mode: [enabled/disabled]
-- Path alias: [e.g., `@/` maps to `./src/`]
-- Special types: [e.g., React, Next.js, Node, etc.]
+- Target: ES2022
+- Strict mode: enabled
+- Path alias: `@/` maps to `./src/`
+- Special types: React, Vite client types, `@cloudflare/workers-types`
 
 ## Testing
 
 Tests serve dual purpose:
-1. **Validation** - Verify code works
-2. **Directional Context** - Guide AI development
+1. **Validation** — verify code works
+2. **Directional context** — guide AI development
 
-**Commands:**
+**Commands** (after Phase 1 lands the scaffolding):
 ```bash
-npm test                  # Run all tests
-npm run test:watch        # Watch mode
-npm run test:coverage     # Coverage report
+bun test                  # Run all tests (both Vitest pools)
+bun run test:watch        # Watch mode
+bun run test:coverage     # Coverage report
 ```
 
-**Coverage target:** 100% (enforced minimums: 95% lines/functions/statements, 90% branches)
+**Coverage target:** 100% (enforced minimums: 95% lines/functions/statements, 90% branches).
 
-**See:** [testing-strategy.md](./REFERENCE/testing-strategy.md) for complete details
+**See:** [testing-strategy.md](./REFERENCE/testing-strategy.md)
 
 ## Quick reference links
 
-**Planning & Specs:**
+**Planning & specs:**
 - **Project outline** → [SPECIFICATIONS/ORIGINAL_IDEA/project-outline.md](./SPECIFICATIONS/ORIGINAL_IDEA/project-outline.md)
-- **Implementation phases** → See section above or [SPECIFICATIONS/](./SPECIFICATIONS/)
-- **Completed specs** → [ARCHIVE/](./SPECIFICATIONS/ARCHIVE/)
-- **Other ORIGINAL_IDEA documents** (naming, brainstorms, research — if you've added any) → [SPECIFICATIONS/ORIGINAL_IDEA/](./SPECIFICATIONS/ORIGINAL_IDEA/)
+- **Prototype source of truth** → [SPECIFICATIONS/ORIGINAL_IDEA/ClaudeShipSource/](./SPECIFICATIONS/ORIGINAL_IDEA/ClaudeShipSource/)
+- **Implementation phases** → see list above or [SPECIFICATIONS/](./SPECIFICATIONS/)
+- **Completed specs** → [SPECIFICATIONS/ARCHIVE/](./SPECIFICATIONS/ARCHIVE/)
 
-**Reference Docs:**
-- **Setting up environment?** → [environment-setup.md](./REFERENCE/environment-setup.md)
+**Reference docs:**
+- **Cloudflare resource setup?** → [environment-setup.md](./REFERENCE/environment-setup.md)
 - **Testing strategy?** → [testing-strategy.md](./REFERENCE/testing-strategy.md)
 - **Known issues?** → [technical-debt.md](./REFERENCE/technical-debt.md)
 - **Getting unstuck?** → [troubleshooting.md](./REFERENCE/troubleshooting.md)
-- **Architecture decisions?** → [decisions/](./REFERENCE/decisions/) - ADRs explaining why things are this way
-- **Rolling out a template improvement?** → [TEMPLATE-UPDATES/](./REFERENCE/TEMPLATE-UPDATES/) - Migration packets for derivative projects
+- **Why is it this way?** → [decisions/](./REFERENCE/decisions/) — ADRs
 
 ## Project-specific notes
 
-[Add any project-specific context, quirks, or important information here]
-
-**Example topics:**
-- Special build considerations
-- Deployment gotchas
-- External service limitations
-- Performance targets
-- Security requirements
-- Compliance considerations
+- **Cost constraint is binding.** Anything that adds a recurring bill needs an explicit justification. Cloudflare Free plan only.
+- **Faithful port.** Game behaviour, visuals, and AI feel match the prototype. Improvements are out of scope until v1.0 ships; tweaks beyond that need an ADR.
+- **Solo maintainer.** No on-call rotation, no shared inboxes. Operational complexity has to stay low.
+- **British English** in all docs and user-facing copy.
 
 ---
 
-**Remember:** This file is your navigation hub. Keep it current as the project evolves, but keep it concise. Details belong in subdirectory files.
+**Remember:** This file is the navigation hub. Keep it current and concise; details belong in subdirectory files.
