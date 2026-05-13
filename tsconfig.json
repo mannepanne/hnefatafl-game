@@ -20,7 +20,7 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
 
-    "types": ["@cloudflare/workers-types", "vite/client"],
+    "types": ["vite/client"],
 
     "baseUrl": ".",
     "paths": {

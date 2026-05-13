@@ -7,10 +7,10 @@ import type { Env } from "./types";
 
 const api = new Hono<{ Bindings: Env }>();
 api.route("/", health);
-api.notFound((c) => c.json({ error: "not_found" }, 404));
 
 const app = new Hono<{ Bindings: Env }>();
 app.route("/api", api);
+app.notFound((c) => c.json({ error: "not_found" }, 404));
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
