@@ -119,7 +119,7 @@ Replace this template guidance with your actual phase list when you:
 
 Development is organised into eight sequential phases mapped to three shippable milestones. Each phase includes scope, acceptance criteria, testing strategy, and PR workflow.
 
-**Current phase:** Phase 1 — Foundation (not yet started).
+**Current phase:** Phase 1 — Foundation (scaffolding in progress on `feature/phase-1-foundation`).
 
 ### v0.1 — Anonymous play
 

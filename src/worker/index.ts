@@ -3,7 +3,6 @@
 
 import { Hono } from "hono";
 import { health } from "./routes/health";
-import type { Env } from "./types";
 
 const api = new Hono<{ Bindings: Env }>();
 api.route("/", health);

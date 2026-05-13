@@ -2,7 +2,6 @@
 // ABOUT: Used by uptime checks and Phase 1 acceptance criteria.
 
 import { Hono } from "hono";
-import type { Env } from "../types";
 
 export const health = new Hono<{ Bindings: Env }>();
 
