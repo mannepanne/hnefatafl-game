@@ -1,281 +1,313 @@
-# Environment & Secrets Setup
+# Environment setup
 
-**When to read this:** Setting up local development, configuring secrets, or deploying to production.
+**When to read this:** Setting up local development, provisioning Cloudflare resources, configuring secrets, or deploying to production.
 
-**Related Documents:**
-- [CLAUDE.md](./../CLAUDE.md) - Project navigation index
-- [troubleshooting.md](./troubleshooting.md) - Common issues and solutions
-
----
-
-**⚠️ TEMPLATE GUIDANCE** - Replace this file with your project-specific environment configuration. Use the structure below as a guide.
+**Related documents:**
+- [CLAUDE.md](./../CLAUDE.md) — Project navigation index
+- [troubleshooting.md](./troubleshooting.md) — Common issues and solutions
+- [ADR: Cloudflare-only stack](./decisions/2026-05-12-cloudflare-only-stack.md) — Why everything is on Cloudflare
+- [ADR: Email provider abstraction](./decisions/2026-05-12-email-provider-abstraction.md) — Cloudflare Email Sending primary, Resend fallback
 
 ---
 
-## Configuration overview
+## At a glance
 
-**Environment files used:**
-- **Local development:** [e.g., `.dev.vars`, `.env.local`, etc. - specify which and why]
-- **Production:** [e.g., Cloudflare Workers secrets, Vercel env vars, AWS Parameter Store, etc.]
+Everything runs on Cloudflare. There are no external services to wire up in Phase 1.
 
-**Security reminder:**
-- Never commit secret files to git
-- Add all secret files to `.gitignore`
-- Use different credentials for development and production
+| Resource | Used for | Added in |
+|---|---|---|
+| Cloudflare Worker | SPA host + API | Phase 1 |
+| Static Assets binding | Serves the built React SPA | Phase 1 |
+| D1 database | SQLite, primary data store | Phase 1 (schema fills out in Phase 4) |
+| KV namespace | Magic-link tokens, rate-limit buckets, anonymous counters | Phase 1 (smoke binding only; real keys land in Phase 4/5) |
+| Custom Domain | `hnefatafl.hultberg.org` | Phase 1 |
+| R2 bucket | Piece textures | Phase 7 |
+| Email Sending (beta) | Magic-link emails | Phase 5 |
+| Resend (`hultberg.org`) | Email fallback | Phase 5 |
+| Turnstile | Bot challenge on magic-link request | Phase 5 |
+
+**Cost:** Cloudflare Free plan only. Anything that would push us off the free tier needs an ADR.
 
 ---
 
-## Required environment variables
+## Prerequisites
 
-### [SERVICE_1_API_KEY]
-[Description of what this key is for]
+Install once on your dev machine:
 
-**How to obtain:**
-1. [Step 1: e.g., "Sign up at service.com"]
-2. [Step 2: e.g., "Navigate to API settings"]
-3. [Step 3: e.g., "Generate new API key"]
-
-**Local setup:**
 ```bash
-# Add to .dev.vars (or .env.local)
-SERVICE_1_API_KEY=your_key_here
+# Bun (package manager + script runner)
+curl -fsSL https://bun.sh/install | bash
+
+# Wrangler (Cloudflare CLI) — installed as a project dev dependency, but a global copy is handy
+bun install -g wrangler
+
+# GitHub CLI (for PR workflow)
+brew install gh
 ```
 
-**Production setup:**
-```bash
-# Example for Cloudflare Workers
-npx wrangler secret put SERVICE_1_API_KEY
+You also need:
 
-# Example for Vercel
-vercel env add SERVICE_1_API_KEY
-
-# Example for generic env var
-export SERVICE_1_API_KEY=your_key_here
-```
-
-**Permissions needed:** [e.g., "Read-only access to user data"]
-**Cost:** [e.g., "Free tier: 1000 requests/month, Paid: $0.001/request"]
+- A Cloudflare account (Free plan is fine) with Workers enabled.
+- The `hultberg.org` zone on Cloudflare DNS (already in place).
+- `gh auth login` completed.
 
 ---
 
-### [DATABASE_URL]
-[Description of what this connects to]
+## First-time Cloudflare setup
 
-**How to obtain:**
-1. [Step 1: e.g., "Create project at supabase.com"]
-2. [Step 2: e.g., "Navigate to project settings"]
-3. [Step 3: e.g., "Copy connection string"]
+These commands provision the Cloudflare resources Phase 1 needs. Run them **once**, from the project root, while authenticated.
 
-**Local setup:**
+### 1. Authenticate
+
 ```bash
-# Add to .dev.vars
-DATABASE_URL=postgresql://user:password@host:port/database
+wrangler login
 ```
 
-**Production setup:**
+Opens a browser, asks you to authorise Wrangler against your account. The session is stored in `~/.wrangler/`.
+
+### 2. Create the D1 database
+
 ```bash
-npx wrangler secret put DATABASE_URL
+wrangler d1 create hnefatafl-db
 ```
 
-**Format:** `[connection string format and explanation]`
-**Security:** [e.g., "Use SSL mode, rotate credentials quarterly"]
+Output looks like:
 
----
-
-### [ADDITIONAL_VARIABLE]
-[Continue pattern for each environment variable your project needs]
-
----
-
-## Environment file templates
-
-### `.dev.vars` Template
-```bash
-# Local development environment variables
-# Copy this to .dev.vars and fill in your actual values
-
-# Service 1
-SERVICE_1_API_KEY=your_key_here
-
-# Database
-DATABASE_URL=your_connection_string_here
-
-# Email (if applicable)
-EMAIL_API_KEY=your_email_key_here
-EMAIL_FROM=noreply@yourdomain.com
-
-# Add other variables as needed
+```toml
+[[d1_databases]]
+binding = "DB"
+database_name = "hnefatafl-db"
+database_id = "abcdef12-3456-7890-abcd-ef1234567890"
 ```
 
-### `.env.local` Template (if using Next.js or similar)
+Copy the `database_id` into `wrangler.toml` (replacing the placeholder). The `binding = "DB"` and `database_name = "hnefatafl-db"` should already match.
+
+### 3. Create the KV namespace
+
 ```bash
-# Next.js environment variables
-# Copy this to .env.local and fill in your actual values
-
-# Public variables (accessible in browser)
-NEXT_PUBLIC_API_URL=http://localhost:3000
-
-# Private variables (server-side only)
-DATABASE_URL=your_connection_string_here
-SERVICE_1_API_KEY=your_key_here
+wrangler kv namespace create "KV"
 ```
 
----
+Output:
 
-## Third-party service setup
-
-### [Service Name 1]
-**Purpose:** [What this service does for your project]
-**Website:** [URL]
-**Documentation:** [Docs URL]
-
-**Setup steps:**
-1. [Step 1]
-2. [Step 2]
-3. [Step 3]
-
-**Configuration:**
-- [Config item 1]
-- [Config item 2]
-
-**Testing connection:**
-```bash
-# Command to verify service is working
-[test command here]
+```toml
+[[kv_namespaces]]
+binding = "KV"
+id = "0123456789abcdef0123456789abcdef"
 ```
 
----
+Copy `id` into `wrangler.toml` (replacing the placeholder).
 
-### [Service Name 2]
-[Repeat pattern for each third-party service]
+### 4. Apply the initial D1 migration
 
----
+The migration in `src/db/migrations/0000_init.sql` creates the `_pipeline_check` table so we can prove the binding works end to end. (It gets dropped in Phase 4 once the real schema lands.)
 
-## Local development setup
-
-### First-time setup
-
-1. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-2. **Create environment file**
-   ```bash
-   cp .dev.vars.template .dev.vars
-   # Edit .dev.vars and add your actual values
-   ```
-
-3. **Verify configuration**
-   ```bash
-   npm run dev
-   # Check that services connect successfully
-   ```
-
-### Updating environment variables
-
-**When you add a new variable:**
-1. Update this documentation
-2. Update `.dev.vars.template`
-3. Add to production environment (Cloudflare/Vercel/etc.)
-4. Notify team members to update their local `.dev.vars`
-
----
-
-## Production deployment
-
-### Environment variables checklist
-
-Before deploying, ensure all required variables are set:
-
-- [ ] [SERVICE_1_API_KEY]
-- [ ] [DATABASE_URL]
-- [ ] [ADDITIONAL_VARIABLE]
-- [ ] [Add all your variables to this checklist]
-
-### Deployment commands
-
-**Cloudflare Workers:**
 ```bash
-# List current secrets
-npx wrangler secret list
+# Apply locally (Miniflare-backed D1, file under .wrangler/state/)
+wrangler d1 migrations apply hnefatafl-db --local
 
-# Add/update secret
-npx wrangler secret put VARIABLE_NAME
-
-# Deploy
-npm run deploy
+# Apply to remote (production D1)
+wrangler d1 migrations apply hnefatafl-db --remote
 ```
 
-**Vercel:**
-```bash
-# Add environment variable
-vercel env add VARIABLE_NAME production
+### 5. Deploy the Worker
 
-# Deploy
-vercel --prod
+```bash
+bun run deploy
 ```
 
-**[Your platform]:**
+This builds the SPA (`vite build`) and deploys the Worker plus its static assets to `hnefatafl-game.<account-subdomain>.workers.dev`.
+
+Hit the health endpoint to confirm:
+
 ```bash
-# Platform-specific commands
+curl https://hnefatafl-game.<account-subdomain>.workers.dev/api/health
+# {"status":"ok"}
+```
+
+### 6. Wire the Custom Domain
+
+In the Cloudflare dashboard:
+
+1. **Workers & Pages → hnefatafl-game → Settings → Triggers → Custom Domains → Add Custom Domain**
+2. Enter `hnefatafl.hultberg.org`.
+3. Cloudflare provisions the cert and adds the DNS record automatically (because `hultberg.org` is already on Cloudflare DNS).
+
+The `*.workers.dev` URL remains live and serves as the SSL fallback if the custom domain misbehaves.
+
+Verify:
+
+```bash
+curl https://hnefatafl.hultberg.org/api/health
+# {"status":"ok"}
 ```
 
 ---
 
-## Security best practices
+## Local development
 
-### Development
-- Use separate API keys for development and production
-- Never log or expose secret values
-- Rotate development credentials regularly
+### `.dev.vars`
 
-### Production
-- Use environment-specific credentials
-- Enable IP restrictions where possible
-- Monitor API usage for anomalies
-- Rotate credentials quarterly or when team members leave
-- Use secret management services (e.g., AWS Secrets Manager, HashiCorp Vault)
+Phase 1 doesn't need any secrets. The file lives at the project root and is gitignored. Add variables as they're introduced:
 
-### Git Safety
-- Double-check `.gitignore` includes all secret files
-- Use pre-commit hooks to prevent accidental secret commits
-- If secrets are committed, rotate immediately and clean git history
+```bash
+# Phase 5 onward — placeholders, not committed
+# EMAIL_PROVIDER=cloudflare        # or "resend"
+# RESEND_API_KEY=re_...
+# TURNSTILE_SECRET_KEY=0x4A...
+```
+
+Wrangler auto-loads `.dev.vars` when running `wrangler dev` or `vite dev` with the Cloudflare plugin.
+
+### Running the dev server
+
+```bash
+bun install
+bun run dev
+```
+
+The `@cloudflare/vite-plugin` runs Vite and the Worker together against a local Miniflare runtime. You get:
+
+- Hot module reload for the React SPA.
+- The real Worker (Hono) handling `/api/*`.
+- Local D1 and KV bindings (state stored in `.wrangler/state/` — gitignored).
+
+Open the URL it prints (typically `http://localhost:5173`).
+
+### Useful commands
+
+```bash
+bun run dev            # Vite + Worker, HMR, local D1/KV
+bun run build          # Vite build only (outputs dist/)
+bun run deploy         # Build + wrangler deploy
+bun run test           # Vitest, both pools (workers + node)
+bun run test:watch     # Watch mode
+bun run test:coverage  # Coverage report
+bun run typecheck      # tsc --noEmit
+bun run db:generate    # drizzle-kit generate (emits SQL into migrations dir)
+bun run db:apply:local # wrangler d1 migrations apply --local
+bun run db:apply       # wrangler d1 migrations apply --remote
+```
+
+---
+
+## Production secrets
+
+Use `wrangler secret put` for anything sensitive. They're encrypted at rest in Cloudflare and surface as environment variables on the Worker.
+
+```bash
+# Phase 5 onward — examples, not needed in Phase 1
+wrangler secret put RESEND_API_KEY
+wrangler secret put TURNSTILE_SECRET_KEY
+```
+
+List what's currently set:
+
+```bash
+wrangler secret list
+```
+
+**Never put secrets in `wrangler.toml`** — that file is committed to git. Secrets only live in `.dev.vars` (local, gitignored) or `wrangler secret put` (production).
+
+---
+
+## CI / GitHub Actions secrets
+
+CI runs `bun install && bun run typecheck && bun run test && bun run build`. It does **not** deploy in Phase 1 — deploys are manual via `bun run deploy`.
+
+Three repository secrets need to be set in **GitHub → Settings → Secrets and variables → Actions**:
+
+| Secret | Where to get it |
+|---|---|
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare dashboard → Workers & Pages → right sidebar, "Account ID" |
+| `CLOUDFLARE_DATABASE_ID` | Output of `wrangler d1 create` (step 2 above) |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare dashboard → My Profile → API Tokens → Create Token |
+
+For `CLOUDFLARE_API_TOKEN`, use a **Custom Token** with this minimum scope:
+
+- **Permissions:** Account → D1 → Edit
+- **Account Resources:** Include → \<your account\>
+- **TTL:** leave unbounded, or pin it to a year and rotate annually
+
+(The token isn't used to deploy in Phase 1, but having D1:Edit lets CI run remote migrations later if we want.)
+
+---
+
+## Project conventions
+
+### Files that must stay out of git
+
+`.gitignore` covers:
+
+```
+node_modules/
+dist/
+.wrangler/          # Miniflare state, includes local D1/KV data
+.dev.vars           # local secrets
+.dev.vars.*         # any variant
+coverage/
+.DS_Store
+```
+
+### Files that go in git
+
+- `wrangler.toml` — contains binding **names** and **IDs** (IDs are not secrets; they're stable handles).
+- `drizzle.config.ts` — schema location, dialect, out-dir for migrations.
+- `src/db/migrations/*.sql` — checked-in, deterministic.
 
 ---
 
 ## Troubleshooting
 
-### "Environment variable not found"
-- Verify variable name matches exactly (case-sensitive)
-- Restart dev server after changing `.dev.vars`
-- Check variable is actually set: `echo $VARIABLE_NAME`
+### `wrangler dev` says "no D1 database with id …"
 
-### "Invalid API key" errors
-- Verify key is copied correctly (no extra spaces)
-- Check key hasn't expired
-- Verify key has required permissions
-- Try regenerating key
+Run `wrangler d1 migrations apply hnefatafl-db --local` once — local D1 only exists after the first migration runs.
 
-### "Connection refused" errors
-- Check service URLs are correct
-- Verify network connectivity
-- Check if service is down (status page)
-- Verify firewall/security group settings
+### Custom Domain shows "522" or doesn't resolve
 
----
+Wait 1–2 minutes after adding it; Cloudflare provisions the cert on first request. If it persists, fall back to the `*.workers.dev` URL and check **Workers & Pages → hnefatafl-game → Settings → Triggers**.
 
-## Environment variable reference
+### Local secrets aren't being picked up
 
-Quick reference table of all variables:
+`.dev.vars` is read at process start. Restart `bun run dev` after changing it.
 
-| Variable Name | Required | Default | Description |
-|---------------|----------|---------|-------------|
-| SERVICE_1_API_KEY | Yes | - | API key for Service 1 |
-| DATABASE_URL | Yes | - | Database connection string |
-| ADDITIONAL_VAR | No | `default_value` | Description |
-| [Add all vars] | - | - | - |
+### `wrangler` is using the wrong account
+
+```bash
+wrangler whoami
+wrangler logout && wrangler login   # if you need to switch
+```
+
+### CI fails with "401 Unauthorized" against Cloudflare
+
+The API token in `CLOUDFLARE_API_TOKEN` doesn't have `D1:Edit` or has been rotated. Recreate it and update the GitHub secret.
 
 ---
 
-**Remember to update this document** whenever you add, remove, or change environment variables!
+## Reference: full Cloudflare resource list
+
+For the curious or the future-self resurrecting this project:
+
+```bash
+# What's bound to the Worker
+wrangler types         # regenerates worker-configuration.d.ts from wrangler.toml
+
+# D1
+wrangler d1 list
+wrangler d1 info hnefatafl-db
+wrangler d1 execute hnefatafl-db --remote --command="SELECT name FROM sqlite_master WHERE type='table'"
+
+# KV
+wrangler kv namespace list
+wrangler kv key list --binding=KV --remote
+
+# Secrets
+wrangler secret list
+
+# Deployments
+wrangler deployments list
+```
+
+---
+
+**Update this document** whenever a new Cloudflare resource is added, a new secret is introduced, or a setup step changes. The Phase-by-Phase table at the top is the canonical inventory.
