@@ -51,7 +51,7 @@ interface GameState {
   winner: Side | null
   winReason: WinReason | null
   moveCount: number
-  startTime: number               // ms epoch at game start; supplied by caller (see § Impurities)
+  startTime: number               // ms epoch at game start; supplied by caller (see § Lift plan)
 }
 ```
 
@@ -74,7 +74,7 @@ Lifted from prototype [`engine.ts`](./ORIGINAL_IDEA/ClaudeShipSource/src/lib/gam
 - `getValidMoves(state, piece): Position[]` — rook-style sliding; throne is passable but not stoppable for non-kings; corners are entirely blocked for non-kings.
 - `getAllMovesForSide(board, side): { piece: Piece; moves: Position[] }[]` — what the AI iterates.
 - `makeMove(state, from, to): GameState` — pure transition, applies capture-processing-order (custodial → shield wall → dedupe → remove), updates `capturedBy*`, increments `moveCount`, toggles `currentTurn`, checks win conditions, returns new state.
-- `checkWinCondition(state): WinReason | null` — returns the full discriminated union, not a side string. Order of check (matches prototype): king-captured → king-escaped → attackers-insufficient → no-legal-moves.
+- `checkWinCondition(state): WinReason | null` — returns the full discriminated union, not a side string. Order of check (matches prototype): king-escaped → attackers-insufficient → king-captured → no-legal-moves.
 - Helpers exported for tests + AI: `isThrone`, `isCorner`, `isHostileSquare`, `findKing`, `getPieceAt`.
 
 #### AI (`src/shared/game/ai.ts`)
