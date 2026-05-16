@@ -216,13 +216,19 @@ bunx wrangler secret list
 
 ## CI / GitHub Actions secrets
 
-CI runs `bun install && bun run typecheck && bun run test && bun run build`. It does **not** deploy in Phase 1 — deploys are manual via `bun run deploy`.
+CI runs two jobs:
 
-**Pre-flight: pin third-party actions to a commit SHA before adding secrets.** Floating `@v2`/`@v4` tags resolve to whatever the upstream maintainer points to; if any of those repos is ever compromised, a malicious release could exfiltrate `CLOUDFLARE_API_TOKEN` from CI. With secrets in place this matters; without secrets it doesn't. Edit `.github/workflows/ci.yml` and replace `oven-sh/setup-bun@v2` and `actions/checkout@v4` with their current full SHA (look up under each action's "Releases" page on GitHub), keeping the version as a trailing comment for readability:
+1. **`ci`** — install → typecheck → test → build. Runs on every push and PR.
+2. **`deploy`** — `bun run deploy` (Wrangler). Runs only on push to `main`, after `ci` passes. Requires `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets (see below).
+
+Merging to `main` automatically deploys to production. For manual deploys: `bun run deploy`.
+
+**Actions are pinned to commit SHAs** (not floating `@v4`/`@v2` tags) — if any upstream action repo is compromised, a malicious release cannot exfiltrate `CLOUDFLARE_API_TOKEN`. The current pins in `ci.yml` are:
 
 ```yaml
-- uses: actions/checkout@<full-sha>          # v4.x.x
-- uses: oven-sh/setup-bun@<full-sha>         # v2.x.x
+- uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+- uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
+- uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6  # v2.2.0
 ```
 
 Bump these alongside any other dependency-pin update — Dependabot/Renovate handles this automatically once configured.
