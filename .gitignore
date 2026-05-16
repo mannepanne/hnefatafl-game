@@ -105,6 +105,7 @@ next-env.d.ts
 # Cloudflare
 .wrangler/
 wrangler.toml.backup
+worker-configuration.d.ts
 
 # Terraform
 *.tfstate

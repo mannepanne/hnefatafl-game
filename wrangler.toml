@@ -1,0 +1,22 @@
+name = "hnefatafl-game"
+main = "src/worker/index.ts"
+compatibility_date = "2026-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./dist/client"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "hnefatafl-db"
+database_id = "852c503a-afaf-476e-980d-bc4dde4399ad"
+migrations_dir = "src/db/migrations"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "1a195241770d49e2b0bda17c858899e9"
+
+[observability]
+enabled = true
