@@ -39,6 +39,11 @@ What's caught at block / ask tier, what's deliberately not caught, how the inlin
 
 What the hook approves and why, where it sits in the call path alongside `safety-harness.sh`, what's deliberately out of scope (symlinks, exotic filenames), how to extend, and the rollback path if the upstream defect is fixed. Decision rationale at [`decisions/2026-04-26-scratch-write-pretooluse-hook.md`](./decisions/2026-04-26-scratch-write-pretooluse-hook.md).
 
+### [game-engine.md](./game-engine.md)
+**When to read:** Understanding engine internals, investigating a capture or win-condition bug, extending AI difficulty, or archiving the Phase 2 spec.
+
+Module layout, pure functional state machine, injectable dependencies, custodial/shield-wall capture rules, king capture modes, win condition ordering, AI difficulty dispatch, evaluator factors, and performance targets.
+
 ### [decisions/](./decisions/)
 **When to read:** Making architectural decisions, choosing between alternatives, or looking up why something was built the way it was.
 

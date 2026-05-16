@@ -180,7 +180,7 @@ export function minimax(
     return evaluateBoard(state, aiSide);
   }
 
-  const allMoves = getAllMovesForSide(state.board, toMove);
+  const allMoves = getAllMovesForSide(state, toMove);
   if (allMoves.length === 0) {
     return toMove === aiSide ? -100000 : 100000;
   }
@@ -221,7 +221,7 @@ export function searchFromRoot(
   const rng = opts.rng ?? Math.random;
   const { widths, jitter } = opts;
 
-  const allMoves = getAllMovesForSide(state.board, side);
+  const allMoves = getAllMovesForSide(state, side);
   if (allMoves.length === 0) return null;
 
   const enemySide: Side = side === 'attackers' ? 'defenders' : 'attackers';
@@ -271,7 +271,7 @@ export function searchFromRoot(
 // ---------------------------------------------------------------------------
 
 export function getThrallMove(state: GameState, side: Side, rng: () => number): Move | null {
-  const allMoves = getAllMovesForSide(state.board, side);
+  const allMoves = getAllMovesForSide(state, side);
   if (allMoves.length === 0) return null;
 
   const candidates: ScoredMove[] = [];

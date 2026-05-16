@@ -249,7 +249,7 @@ describe('getValidMoves', () => {
 describe('getAllMovesForSide', () => {
   it('returns only pieces with at least one legal move, all from the requested side', () => {
     const s = createInitialState();
-    const result = getAllMovesForSide(s.board, 'attackers');
+    const result = getAllMovesForSide(s, 'attackers');
     // Some initial attackers are fully blocked (e.g. {0,5}, {10,5}, {5,0}, {5,10})
     expect(result.every(e => e.piece.side === 'attackers')).toBe(true);
     expect(result.every(e => e.moves.length > 0)).toBe(true);
@@ -259,7 +259,7 @@ describe('getAllMovesForSide', () => {
 
   it('does not include pieces from the other side', () => {
     const s = createInitialState();
-    const moves = getAllMovesForSide(s.board, 'defenders');
+    const moves = getAllMovesForSide(s, 'defenders');
     expect(moves.every(m => m.piece.side === 'defenders')).toBe(true);
   });
 });

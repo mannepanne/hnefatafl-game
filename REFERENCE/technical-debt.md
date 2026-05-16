@@ -40,6 +40,22 @@ Items here are accepted risks or pragmatic choices made during development, not 
 - **Future fix:** Add `workflow_dispatch:` under `on:` when the need arises.
 - **Phase introduced:** Phase 1 (CD setup)
 
+### TD-004: No alpha-beta pruning in minimax
+- **Location:** `src/shared/game/ai.ts` — `minimax()`
+- **Issue:** Minimax uses a fixed-width beam search (top-N move selection per ply) instead of alpha-beta pruning. Deeper search would significantly improve the Jarl difficulty without increasing tree size.
+- **Why accepted:** The current beam search produces acceptable Jarl-level play within the 250 ms budget. Alpha-beta is a separate, non-trivial addition; doing it speculatively risks introducing search bugs before the AI quality baseline is validated.
+- **Risk:** Low — affects AI strength ceiling only, not correctness. Current difficulty levels meet the spec's targets.
+- **Future fix:** Add alpha-beta as an opt-in parameter to `minimax()` for a stronger difficulty tier (e.g. Konungr) post-v1.0.
+- **Phase introduced:** Phase 2 (game engine + AI)
+
+### TD-005: Replay-regression test suite is opt-in, not gating
+- **Location:** `tests/shared/game/replay-regression.test.ts`
+- **Issue:** The replay-regression suite runs only when `RUN_REPLAY=1` is set. A breaking engine change could pass CI without triggering the replay suite.
+- **Why accepted:** The move sequence is not yet stable — Phase 3 and later phases may legitimately change AI output. Promoting to gating now would require updating golden files after every AI tweak, creating friction without value until the game ships.
+- **Risk:** Low — the reference-positions suite (`reference-positions.test.ts`) covers all capture and win-condition rules. Replay-regression adds breadth, not depth.
+- **Future fix:** Promote to gating once the game ships (v0.1) and the move sequence is stable. Update CI to run with `RUN_REPLAY=1`.
+- **Phase introduced:** Phase 2 (game engine + AI)
+
 ---
 
 ### Example Format: TD-001: Description

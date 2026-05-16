@@ -148,17 +148,16 @@ export function getValidMoves(state: GameState, piece: Piece): Position[] {
 }
 
 export function getAllMovesForSide(
-  board: (Piece | null)[][],
+  state: GameState,
   side: Side,
 ): { piece: Piece; moves: Position[] }[] {
+  const { board } = state;
   const result: { piece: Piece; moves: Position[] }[] = [];
-  // Build a minimal state view so getValidMoves can accept it
-  const stateView = { board } as GameState;
   for (let r = 0; r < BOARD_SIZE; r++) {
     for (let c = 0; c < BOARD_SIZE; c++) {
       const p = board[r]![c];
       if (p && p.side === side) {
-        const moves = getValidMoves(stateView, p);
+        const moves = getValidMoves(state, p);
         if (moves.length > 0) {
           result.push({ piece: p, moves });
         }
@@ -347,19 +346,7 @@ export function checkWinCondition(state: GameState): WinReason | null {
   }
 
   // No legal moves for current player
-  const stateView = { board } as GameState;
-  const hasAnyMove = getAllMovesForSide(board, currentTurn).length > 0
-    || (() => {
-      for (let r = 0; r < BOARD_SIZE; r++) {
-        for (let c = 0; c < BOARD_SIZE; c++) {
-          const p = board[r]![c];
-          if (p && p.side === currentTurn && getValidMoves(stateView, p).length > 0) return true;
-        }
-      }
-      return false;
-    })();
-
-  if (!hasAnyMove) {
+  if (getAllMovesForSide(state, currentTurn).length === 0) {
     return { kind: 'no-legal-moves', stuckSide: currentTurn };
   }
 
@@ -421,23 +408,6 @@ export function makeMove(state: GameState, from: Position, to: Position): GameSt
   const newMoveCount = state.moveCount + 1;
   const nextTurn: Side = movingSide === 'attackers' ? 'defenders' : 'attackers';
 
-  // Draw on move limit
-  if (newMoveCount >= MAX_MOVES) {
-    return {
-      ...state,
-      board,
-      pieces: remainingPieces,
-      currentTurn: nextTurn,
-      moveHistory: [...state.moveHistory, move],
-      capturedByAttackers: newCapturedByAttackers,
-      capturedByDefenders: newCapturedByDefenders,
-      gameOver: true,
-      winner: null,
-      winReason: null,
-      moveCount: newMoveCount,
-    };
-  }
-
   // Check win conditions on the post-capture board
   let winner: Side | null = null;
   let winReason: WinReason | null = null;
@@ -470,21 +440,27 @@ export function makeMove(state: GameState, from: Position, to: Position): GameSt
 
   // No legal moves for the next player
   if (!winner) {
-    const nextStateView = { board, currentTurn: nextTurn } as GameState;
-    const nextHasMoves = getAllMovesForSide(board, nextTurn).length > 0
-      || (() => {
-        for (let r = 0; r < BOARD_SIZE; r++) {
-          for (let c = 0; c < BOARD_SIZE; c++) {
-            const p = board[r]![c];
-            if (p && p.side === nextTurn && getValidMoves(nextStateView, p).length > 0) return true;
-          }
-        }
-        return false;
-      })();
-    if (!nextHasMoves) {
+    if (getAllMovesForSide({ board } as GameState, nextTurn).length === 0) {
       winner = movingSide;
       winReason = { kind: 'no-legal-moves', stuckSide: nextTurn };
     }
+  }
+
+  // Draw on move limit (only if no win condition fired)
+  if (!winner && newMoveCount >= MAX_MOVES) {
+    return {
+      ...state,
+      board,
+      pieces: remainingPieces,
+      currentTurn: nextTurn,
+      moveHistory: [...state.moveHistory, move],
+      capturedByAttackers: newCapturedByAttackers,
+      capturedByDefenders: newCapturedByDefenders,
+      gameOver: true,
+      winner: null,
+      winReason: null,
+      moveCount: newMoveCount,
+    };
   }
 
   return {

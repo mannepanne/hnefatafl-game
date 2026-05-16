@@ -124,7 +124,7 @@ describe('getThrallMove', () => {
     const s = createInitialState();
     const move = getThrallMove(s, 'attackers', makeSeedRng(1));
     expect(move).not.toBeNull();
-    const all = getAllMovesForSide(s.board, 'attackers');
+    const all = getAllMovesForSide(s, 'attackers');
     const legal = all.some(e =>
       e.piece.position.row === move!.from.row &&
       e.piece.position.col === move!.from.col &&
