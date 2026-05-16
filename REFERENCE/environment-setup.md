@@ -38,8 +38,9 @@ Install once on your dev machine:
 # Bun (package manager + script runner)
 curl -fsSL https://bun.sh/install | bash
 
-# Wrangler (Cloudflare CLI) — installed as a project dev dependency, but a global copy is handy
-bun install -g wrangler
+# Wrangler (Cloudflare CLI) is installed as a project dev dependency.
+# Run it as `bunx wrangler ...` from the project root — no global install needed
+# (and `bunx` guarantees the version matches CI). Global install is optional.
 
 # GitHub CLI (for PR workflow)
 brew install gh
@@ -60,7 +61,7 @@ These commands provision the Cloudflare resources Phase 1 needs. Run them **once
 ### 1. Authenticate
 
 ```bash
-wrangler login
+bunx wrangler login
 ```
 
 Opens a browser, asks you to authorise Wrangler against your account. The session is stored in `~/.wrangler/`.
@@ -68,7 +69,7 @@ Opens a browser, asks you to authorise Wrangler against your account. The sessio
 ### 2. Create the D1 database
 
 ```bash
-wrangler d1 create hnefatafl-db
+bunx wrangler d1 create hnefatafl-db
 ```
 
 Output looks like:
@@ -85,30 +86,32 @@ Copy the `database_id` into `wrangler.toml` (replacing the placeholder). The `bi
 ### 3. Create the KV namespace
 
 ```bash
-wrangler kv namespace create "KV"
+bunx wrangler kv namespace create "hnefatafl-kv"
 ```
 
 Output:
 
 ```toml
 [[kv_namespaces]]
-binding = "KV"
+binding = "hnefatafl_kv"
 id = "0123456789abcdef0123456789abcdef"
 ```
 
-Copy `id` into `wrangler.toml` (replacing the placeholder).
+Copy **only** `id` into `wrangler.toml` (replacing the placeholder). Keep our `binding = "KV"` line — Cloudflare's auto-derived snake_case suggestion is ignored. The string `"hnefatafl-kv"` is the dashboard display title; it disambiguates this namespace from any other Worker on the same account.
 
 ### 4. Apply the initial D1 migration
 
-The migration in `src/db/migrations/0000_init.sql` creates the `_pipeline_check` table so we can prove the binding works end to end. (It gets dropped in Phase 4 once the real schema lands.)
+The migration in `src/db/migrations/0000_pipeline_check.sql` creates the `_pipeline_check` table so we can prove the binding works end to end. (It gets dropped in Phase 4 once the real schema lands.)
 
 ```bash
 # Apply locally (Miniflare-backed D1, file under .wrangler/state/)
-wrangler d1 migrations apply hnefatafl-db --local
+bunx wrangler d1 migrations apply DB --local
 
 # Apply to remote (production D1)
-wrangler d1 migrations apply hnefatafl-db --remote
+bunx wrangler d1 migrations apply DB --remote
 ```
+
+`DB` is the **binding** (matches `wrangler.toml`), which is what wrangler resolves against. `hnefatafl-db` (the database name) also works.
 
 ### 5. Deploy the Worker
 
@@ -122,7 +125,7 @@ Hit the health endpoint to confirm:
 
 ```bash
 curl https://hnefatafl-game.<account-subdomain>.workers.dev/api/health
-# {"status":"ok"}
+# {"ok":true}
 ```
 
 ### 6. Wire the Custom Domain
@@ -139,7 +142,7 @@ Verify:
 
 ```bash
 curl https://hnefatafl.hultberg.org/api/health
-# {"status":"ok"}
+# {"ok":true}
 ```
 
 ---
@@ -193,21 +196,21 @@ bun run db:apply       # wrangler d1 migrations apply --remote
 
 ## Production secrets
 
-Use `wrangler secret put` for anything sensitive. They're encrypted at rest in Cloudflare and surface as environment variables on the Worker.
+Use `bunx wrangler secret put` for anything sensitive. They're encrypted at rest in Cloudflare and surface as environment variables on the Worker.
 
 ```bash
 # Phase 5 onward — examples, not needed in Phase 1
-wrangler secret put RESEND_API_KEY
-wrangler secret put TURNSTILE_SECRET_KEY
+bunx wrangler secret put RESEND_API_KEY
+bunx wrangler secret put TURNSTILE_SECRET_KEY
 ```
 
 List what's currently set:
 
 ```bash
-wrangler secret list
+bunx wrangler secret list
 ```
 
-**Never put secrets in `wrangler.toml`** — that file is committed to git. Secrets only live in `.dev.vars` (local, gitignored) or `wrangler secret put` (production).
+**Never put secrets in `wrangler.toml`** — that file is committed to git. Secrets only live in `.dev.vars` (local, gitignored) or `bunx wrangler secret put` (production).
 
 ---
 
@@ -225,11 +228,14 @@ Three repository secrets need to be set in **GitHub → Settings → Secrets and
 
 For `CLOUDFLARE_API_TOKEN`, use a **Custom Token** with this minimum scope:
 
-- **Permissions:** Account → D1 → Edit
+- **Permissions:**
+  - Account → Workers Scripts → Edit
+  - Account → D1 → Edit
+  - Account → Workers KV Storage → Edit
 - **Account Resources:** Include → \<your account\>
 - **TTL:** leave unbounded, or pin it to a year and rotate annually
 
-(The token isn't used to deploy in Phase 1, but having D1:Edit lets CI run remote migrations later if we want.)
+(Workers Scripts:Edit is required for CI to deploy. D1:Edit lets CI run remote migrations. Workers KV Storage:Edit covers future KV-touching migrations. No Zone resources needed — the Custom Domain attaches the Worker directly without DNS API calls at deploy time.)
 
 ---
 
@@ -261,7 +267,7 @@ coverage/
 
 ### `wrangler dev` says "no D1 database with id …"
 
-Run `wrangler d1 migrations apply hnefatafl-db --local` once — local D1 only exists after the first migration runs.
+Run `bunx wrangler d1 migrations apply DB --local` once — local D1 only exists after the first migration runs.
 
 ### Custom Domain shows "522" or doesn't resolve
 
@@ -274,13 +280,13 @@ Wait 1–2 minutes after adding it; Cloudflare provisions the cert on first requ
 ### `wrangler` is using the wrong account
 
 ```bash
-wrangler whoami
-wrangler logout && wrangler login   # if you need to switch
+bunx wrangler whoami
+bunx wrangler logout && bunx wrangler login   # if you need to switch
 ```
 
 ### CI fails with "401 Unauthorized" against Cloudflare
 
-The API token in `CLOUDFLARE_API_TOKEN` doesn't have `D1:Edit` or has been rotated. Recreate it and update the GitHub secret.
+The API token in `CLOUDFLARE_API_TOKEN` is missing one of `Workers Scripts:Edit`, `D1:Edit`, or `Workers KV Storage:Edit`, or has been rotated. Recreate it and update the GitHub secret.
 
 ---
 
@@ -290,22 +296,22 @@ For the curious or the future-self resurrecting this project:
 
 ```bash
 # What's bound to the Worker
-wrangler types         # regenerates worker-configuration.d.ts from wrangler.toml
+bunx wrangler types         # regenerates worker-configuration.d.ts from wrangler.toml
 
 # D1
-wrangler d1 list
-wrangler d1 info hnefatafl-db
-wrangler d1 execute hnefatafl-db --remote --command="SELECT name FROM sqlite_master WHERE type='table'"
+bunx wrangler d1 list
+bunx wrangler d1 info hnefatafl-db
+bunx wrangler d1 execute hnefatafl-db --remote --command="SELECT name FROM sqlite_master WHERE type='table'"
 
 # KV
-wrangler kv namespace list
-wrangler kv key list --binding=KV --remote
+bunx wrangler kv namespace list
+bunx wrangler kv key list --binding=KV --remote
 
 # Secrets
-wrangler secret list
+bunx wrangler secret list
 
 # Deployments
-wrangler deployments list
+bunx wrangler deployments list
 ```
 
 ---
