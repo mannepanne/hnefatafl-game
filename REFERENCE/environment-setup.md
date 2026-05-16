@@ -218,6 +218,15 @@ bunx wrangler secret list
 
 CI runs `bun install && bun run typecheck && bun run test && bun run build`. It does **not** deploy in Phase 1 — deploys are manual via `bun run deploy`.
 
+**Pre-flight: pin third-party actions to a commit SHA before adding secrets.** Floating `@v2`/`@v4` tags resolve to whatever the upstream maintainer points to; if any of those repos is ever compromised, a malicious release could exfiltrate `CLOUDFLARE_API_TOKEN` from CI. With secrets in place this matters; without secrets it doesn't. Edit `.github/workflows/ci.yml` and replace `oven-sh/setup-bun@v2` and `actions/checkout@v4` with their current full SHA (look up under each action's "Releases" page on GitHub), keeping the version as a trailing comment for readability:
+
+```yaml
+- uses: actions/checkout@<full-sha>          # v4.x.x
+- uses: oven-sh/setup-bun@<full-sha>         # v2.x.x
+```
+
+Bump these alongside any other dependency-pin update — Dependabot/Renovate handles this automatically once configured.
+
 Three repository secrets need to be set in **GitHub → Settings → Secrets and variables → Actions**:
 
 | Secret | Where to get it |
