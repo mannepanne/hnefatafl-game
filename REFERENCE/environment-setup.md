@@ -216,24 +216,27 @@ bunx wrangler secret list
 
 ## CI / GitHub Actions secrets
 
-CI runs `bun install && bun run typecheck && bun run test && bun run build`. It does **not** deploy in Phase 1 — deploys are manual via `bun run deploy`.
+CI runs two jobs:
 
-**Pre-flight: pin third-party actions to a commit SHA before adding secrets.** Floating `@v2`/`@v4` tags resolve to whatever the upstream maintainer points to; if any of those repos is ever compromised, a malicious release could exfiltrate `CLOUDFLARE_API_TOKEN` from CI. With secrets in place this matters; without secrets it doesn't. Edit `.github/workflows/ci.yml` and replace `oven-sh/setup-bun@v2` and `actions/checkout@v4` with their current full SHA (look up under each action's "Releases" page on GitHub), keeping the version as a trailing comment for readability:
+1. **`ci`** — install → typecheck → test → build. Runs on every push and PR.
+2. **`deploy`** — `bun run deploy` (Wrangler) + smoke test (`GET /api/health`). Runs only on push to `main`, after `ci` passes.
 
-```yaml
-- uses: actions/checkout@<full-sha>          # v4.x.x
-- uses: oven-sh/setup-bun@<full-sha>         # v2.x.x
-```
+Merging to `main` automatically deploys to production. For manual deploys: `bun run deploy`.
 
-Bump these alongside any other dependency-pin update — Dependabot/Renovate handles this automatically once configured.
+**Actions are pinned to commit SHAs** (not floating `@v4`/`@v2` tags) — see `.github/workflows/ci.yml` for current pins. Bump alongside dependency updates; Dependabot/Renovate handles this automatically once configured.
 
-Three repository secrets need to be set in **GitHub → Settings → Secrets and variables → Actions**:
+**If a deploy fails:** the smoke test retries five times with backoff. If it still fails, two recovery paths:
 
-| Secret | Where to get it |
-|---|---|
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare dashboard → Workers & Pages → right sidebar, "Account ID" |
-| `CLOUDFLARE_DATABASE_ID` | Output of `wrangler d1 create` (step 2 above) |
-| `CLOUDFLARE_API_TOKEN` | Cloudflare dashboard → My Profile → API Tokens → Create Token |
+1. **`bunx wrangler rollback`** — rolls back to the previous deployment on Cloudflare (fastest; no commit needed)
+2. **Revert and redeploy** — `git revert HEAD && git push` triggers a fresh CI + deploy run
+
+Two repository secrets and one variable are required in **GitHub → Settings → Secrets and variables → Actions**:
+
+| Name | Type | Where to get it |
+|---|---|---|
+| `CLOUDFLARE_API_TOKEN` | Secret | Cloudflare dashboard → My Profile → API Tokens → Create Token |
+| `CLOUDFLARE_DATABASE_ID` | Secret | Output of `wrangler d1 create` (step 2 above) |
+| `CLOUDFLARE_ACCOUNT_ID` | Variable | Cloudflare dashboard → Workers & Pages → right sidebar, "Account ID" |
 
 For `CLOUDFLARE_API_TOKEN`, use a **Custom Token** with this minimum scope:
 

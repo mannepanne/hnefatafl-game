@@ -16,7 +16,7 @@ bun run dev            # Vite + Worker dev server
 bun run test           # Vitest (both pools: workers + node)
 bun run typecheck      # tsc --noEmit
 bun run build          # client SPA + Worker SSR bundle
-bun run deploy         # build + wrangler deploy (requires wrangler login)
+bun run deploy         # build + wrangler deploy (requires wrangler login; merging to main deploys automatically via GitHub Actions)
 ```
 
 > Use `bun run test`, NOT `bun test` — the latter invokes Bun's built-in runner and skips the Vitest config.
