@@ -62,11 +62,14 @@ describe("POST /api/stats/anonymous-games", () => {
     expect(count).toBe(2);
   });
 
-  it("returns 429 when the same IP exceeds the rate limit", async () => {
+  it("returns 429 when the same IP exceeds the rate limit (exercises increment + TTL path)", async () => {
     const ip = "9.9.9.9";
-    // Seed the rate-limit key at the limit (10)
-    await env.KV.put(`ratelimit:stats:${ip}`, "10", { expirationTtl: 3600 });
-
+    // Hit the endpoint RATE_LIMIT times — all should succeed
+    for (let i = 0; i < 10; i++) {
+      const res = await postIncrement(ip);
+      expect(res.status).toBe(200);
+    }
+    // 11th request from the same IP must be rejected
     const res = await postIncrement(ip);
     expect(res.status).toBe(429);
   });

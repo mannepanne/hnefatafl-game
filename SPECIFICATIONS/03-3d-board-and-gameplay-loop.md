@@ -8,7 +8,7 @@
 **Dependencies:** Phase 1 (scaffolding), Phase 2 (engine + AI).
 
 **Brief description:**
-Wire the engine + AI from Phase 2 into a playable web UI. Build the menu page, rules page, and game page, render the 3D board with `@react-three/fiber`, animate moves and captures, and connect the AI turn loop. At the end of this phase, **v0.1 is shippable**: a complete, anonymous, single-player Hnefatafl game runs at `hnefatafl.hultberg.org`. No accounts, no leaderboard, no persistence beyond an in-memory anonymous-games counter (the persisted version lands in Phase 4).
+Wire the engine + AI from Phase 2 into a playable web UI. Build the menu page, rules page, and game page, render the 3D board with `@react-three/fiber`, animate moves and captures, and connect the AI turn loop. At the end of this phase, **v0.1 is shippable**: a complete, anonymous, single-player Hnefatafl game runs at `hnefatafl.hultberg.org`. No accounts, no leaderboard, no persistence beyond a KV-backed anonymous-games counter (the D1-persisted version lands in Phase 4).
 
 Source of truth: [`ClaudeShipSource/spec-architecture.md`](./ORIGINAL_IDEA/ClaudeShipSource/spec-architecture.md), [`spec-frontend-pages.md`](./ORIGINAL_IDEA/ClaudeShipSource/spec-frontend-pages.md), [`spec-frontend-3d.md`](./ORIGINAL_IDEA/ClaudeShipSource/spec-frontend-3d.md), [`spec-frontend-hooks.md`](./ORIGINAL_IDEA/ClaudeShipSource/spec-frontend-hooks.md).
 
@@ -25,7 +25,7 @@ Source of truth: [`ClaudeShipSource/spec-architecture.md`](./ORIGINAL_IDEA/Claud
 
 **Menu page:**
 - [ ] Title, subtitle, "Play" button, difficulty selector (Thrall/Karl/Jarl), side selector (defender/attacker — prototype calls this "Choose your side").
-- [ ] Anonymous-games counter at the bottom — for v0.1 this is in-memory only (resets per page load) **OR** a simple `/api/stats/anonymous-games` endpoint that reads from KV. Pick the KV-backed option: it's a few hours of work and gives v0.1 an honest visible signal that real users are playing.
+- [ ] Anonymous-games counter at the bottom — KV-backed via `/api/stats/anonymous-games`. Persists across page loads; gives v0.1 an honest visible signal that real users are playing.
 - [ ] Links to Rules, Privacy.
 
 **Game page:**
@@ -33,11 +33,11 @@ Source of truth: [`ClaudeShipSource/spec-architecture.md`](./ORIGINAL_IDEA/Claud
 - [ ] Ornate piece style (`OrnatePiece` from prototype, lathe-geometry, ~290 lines). Textured style is **deferred to Phase 7** — for v0.1 we ship ornate-only.
 - [ ] Camera positioned at `[0, 12, ±10]` flipped by side.
 - [ ] Click-to-select piece, click-to-move (only legal moves highlighted). Cancel selection by clicking elsewhere.
-- [ ] AI turn loop: after the player moves, the AI thinks (with the documented 300/500/800ms simulated delay added in the React hook, not in the AI module itself), then animates its move.
+- [ ] AI turn loop: the player's move animates (700ms slide), then the AI thinks (300/500/800ms simulated delay by difficulty, added in the React hook, not in the AI module), then the AI's move animates. Total per-turn pause: ~1000/1200/1500ms.
 - [ ] Move animation: 700ms slide.
 - [ ] Capture animation: three-phase (pop / topple / sink-and-fade).
 - [ ] Game status panel (whose turn, captured pieces count, move count, elapsed time).
-- [ ] Game-over dialog when win condition met. Shows winner, duration, move count. "New game" returns to menu.
+- [ ] Game-over dialog when win condition met. Shows winner, duration (wall-clock seconds from `gameState.startTime` to end), and move count. "New game" returns to menu.
 
 **Rules page:**
 - [ ] Static page describing Copenhagen ruleset, board, pieces, movement, captures, win conditions. Port text from the prototype's `RulesPage.tsx`.
@@ -46,7 +46,7 @@ Source of truth: [`ClaudeShipSource/spec-architecture.md`](./ORIGINAL_IDEA/Claud
 - [ ] Static page. For v0.1, copy the prototype's text but with a note that accounts/data are not yet in play — adjust again in v0.2.
 
 **Hooks:**
-- [ ] `useGame` hook: holds `GameState`, exposes `selectPiece`, `move`, `newGame`, `aiTurn`. Handles AI think delay (300/500/800ms by difficulty) and animation timing.
+- [ ] `useGame` hook: holds `GameState` (engine state) alongside `UIState` (`{ selectedPiece: Piece | null; validMoves: Position[]; lastMove: Move | null }`) as separate React state slices. Exposes `selectPiece`, `move`, `newGame`. Dispatches AI turn automatically when `currentTurn === aiSide`. Handles AI think delay (300/500/800ms by difficulty) and animation timing.
 - [ ] `usePieceStyle` hook: reads `localStorage` key `hnefatafl-piece-style`, defaults to `ornate`. For v0.1 only `ornate` is valid; `textured` is rejected with a fallback to ornate.
 
 **Worker side:**
@@ -65,6 +65,7 @@ Source of truth: [`ClaudeShipSource/spec-architecture.md`](./ORIGINAL_IDEA/Claud
 - Textured piece style — Phase 7.
 - Accounts, leaderboard, profile, admin, contact — placeholder views only.
 - Persisted per-user game results — Phase 4.
+- `PlayerIdentity.tsx` from the prototype — Supabase-dependent; replaced by an inline "Wanderer" label for v0.1.
 - Sound effects.
 - Multiplayer.
 - Save/load mid-game.
@@ -78,7 +79,7 @@ Source of truth: [`ClaudeShipSource/spec-architecture.md`](./ORIGINAL_IDEA/Claud
 - [ ] No console errors during a complete game.
 - [ ] Anonymous-games counter increments after each game completes and persists across page reloads.
 - [ ] Rules page renders with correct content.
-- [ ] Mobile responsive: playable on a phone-sized viewport (camera/zoom may need adjustment per the prototype).
+- [ ] Mobile playable: on a 375×667 viewport, the full board is visible, tap-to-select and tap-to-move work, and the status panel stacks below the board. Camera zoom may need adjustment from the prototype defaults.
 - [ ] All Phase 3 tests pass; coverage ≥95% on `src/client/hooks/**` and `src/client/state/**` (3D component coverage is lower by necessity).
 
 ---
@@ -88,9 +89,17 @@ Source of truth: [`ClaudeShipSource/spec-architecture.md`](./ORIGINAL_IDEA/Claud
 ### Architecture decisions
 
 **Port `Board3D` largely verbatim, then prune**
-- Choice: Bring `Board3D.tsx`, `OrnatePiece.tsx`, `GameStatus.tsx`, `GameOverDialog.tsx`, and `PlayerIdentity.tsx` over from the prototype as a starting point. Adjust import paths and the engine API binding. Delete textured-piece code paths (deferred to Phase 7).
+- Choice: Bring `Board3D.tsx`, `OrnatePiece.tsx`, `GameStatus.tsx`, and `GameOverDialog.tsx` over from the prototype as a starting point. Adjust import paths and props to consume `UIState` (see below) alongside `GameState`. Delete textured-piece code paths (deferred to Phase 7). `PlayerIdentity.tsx` is **not ported** — it is Supabase-dependent; replace with an inline "Wanderer" label. Phase 5 wires up real identity.
 - Rationale: The 3D code is well-tuned and reproducing it from scratch risks subtle regressions (camera angles, lighting, piece geometry). Port-then-prune is faster and more faithful.
 - Alternatives considered: Rewriting from scratch with cleaner abstractions. Rejected — not enough upside, real downside risk.
+
+**UI state vs engine state**
+- The Phase 2 engine is pure — `selectedPiece`, `validMoves`, and `lastMove` do not live in `GameState`. These are presentation concerns owned by the React layer.
+- `useGame` manages two state slices: `gameState: GameState` (engine, updated immutably via `makeMove`) and `uiState: UIState` where `UIState = { selectedPiece: Piece | null; validMoves: Position[]; lastMove: Move | null }`.
+- `selectPiece(piece)` calls `getValidMoves` and writes to `uiState`. `move(from, to)` calls `makeMove`, updates `gameState`, and resets `uiState`.
+- `Board3D` receives both slices as props: reads `uiState` for highlight overlays and `gameState` for piece positions and turn state.
+- **`useGame` is a rewrite**, not a port — the prototype's hook calls functions that no longer exist in the engine. Use the prototype as a behavioural reference, not a copy-paste source.
+- **Interaction contract:** clicking an empty square deselects; clicking the selected piece again deselects; clicking a different friendly piece selects it instead (replacing the previous selection); clicking an enemy piece while a piece is selected does nothing (not a valid move target, does not cancel selection).
 
 **State-machine router, not react-router**
 - Choice: Single `AppView` union type with `useState`; navigation by setState.
@@ -98,8 +107,9 @@ Source of truth: [`ClaudeShipSource/spec-architecture.md`](./ORIGINAL_IDEA/Claud
 - Alternatives considered: react-router-dom (overkill for v0.1). May revisit in v1.0 if we want shareable URLs for leaderboard/profile pages.
 
 **AI think delay belongs to the hook, not the AI module**
-- Choice: `getAIMove` in `src/shared/game/ai.ts` returns instantly. The 300/500/800ms simulated thinking pause is added in `useGame` via `setTimeout`.
+- Choice: `getAIMove` in `src/shared/game/ai.ts` returns instantly. The 300/500/800ms simulated thinking pause is added in `useGame` via `setTimeout`. Total per-turn pause (including the 700ms move animation) is ~1000/1200/1500ms.
 - Rationale: Keeps the AI module pure (Phase 2 acceptance criterion). UX timing is a presentation concern. Also future-proofs server-side AI invocation — if we ever validate a game replay server-side, we don't want fake delays in the loop.
+- **AI opening move:** when the player picks the defender side, the AI plays attackers and moves first (attackers always go first in Copenhagen hnefatafl). `useGame` dispatches an AI turn in a `useEffect` triggered on mount whenever `gameState.currentTurn === aiSide`. No special-case handling needed — the same dispatch path fires for the opening move and every subsequent AI turn.
 
 **KV for the anonymous-games counter, with per-IP rate limit**
 - Choice: Use KV with a single counter key. Rate-limit the `POST /api/stats/anonymous-games` endpoint to 10 increments per IP per hour, also in KV (TTL'd keys).
@@ -137,9 +147,9 @@ src/client/
 │   │   ├── OrnatePiece.tsx       // ported verbatim
 │   │   ├── GameStatus.tsx        // ported
 │   │   ├── GameOverDialog.tsx    // ported
-│   │   └── PlayerIdentity.tsx    // ported (anonymous-only for v0.1)
+│   │   └── WandererLabel.tsx     // inline "Wanderer" stub — PlayerIdentity.tsx not ported (Supabase-dependent, Phase 5)
 ├── hooks/
-│   ├── useGame.ts                // ported, adapted to inject AI think delay
+│   ├── useGame.ts                // rewritten (prototype is behavioural reference); manages GameState + UIState
 │   ├── useGame.test.ts
 │   ├── usePieceStyle.ts          // simplified for v0.1 (ornate only)
 │   └── usePieceStyle.test.ts
@@ -204,7 +214,7 @@ None. KV holds the counter and rate-limit buckets.
 - [ ] Type checking passes
 - [ ] No `console.log` left in client code
 - [ ] No `debugger` statements
-- [ ] Lighthouse a11y score ≥90 on menu, game-page-during-play, rules, privacy
+- [ ] Lighthouse a11y score ≥90 on menu, rules, privacy; ≥80 on the game page (TD-002 makes ≥90 unachievable without keyboard nav)
 - [ ] Bundle size sane (under ~800KB gzip is the rough target; react-three-fiber pushes us up)
 - [ ] No dependency on the prototype's `supabase` package — confirm it's not in `package.json`
 
@@ -247,7 +257,7 @@ None. KV holds the counter and rate-limit buckets.
 
 ### Performance considerations
 
-- AI runs on the main thread; Karl/Jarl can hit ~80ms which is visible as a frame stutter. **Mitigation:** the simulated think-delay (300/500/800ms) covers this; the AI call is wrapped in a `setTimeout` so the browser breathes first.
+- AI runs on the main thread; Karl/Jarl can hit ~80ms which is visible as a frame stutter. **Mitigation:** the simulated think-delay (300/500/800ms, plus the 700ms move animation) covers this; the AI call is wrapped in a `setTimeout` so the browser breathes first.
 - Capture animations should use `useFrame` from r3f, not React state updates per frame.
 
 ### Security considerations

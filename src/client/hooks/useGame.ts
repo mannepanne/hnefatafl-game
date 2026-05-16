@@ -36,19 +36,28 @@ export function useGame(config: GameConfig) {
   const [gameState, setGameState] = useState<GameState>(() => createInitialState());
   const [uiState, setUiState] = useState<UIState>(INITIAL_UI_STATE);
   const [isAIThinking, setIsAIThinking] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  // gameKey increments on every newGame() call so the AI effect always re-fires,
+  // even when currentTurn is structurally identical before and after the reset.
+  const [gameKey, setGameKey] = useState(0);
 
   const playerSide = config.playerSide;
   const aiSide: Side = playerSide === 'attackers' ? 'defenders' : 'attackers';
 
-  // Refs to avoid stale closures inside setTimeout
+  // Refs to avoid stale closures inside setTimeout and event handlers
   const gameStateRef = useRef(gameState);
   gameStateRef.current = gameState;
+
+  const uiStateRef = useRef(uiState);
+  uiStateRef.current = uiState;
 
   const aiTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   const newGame = useCallback(() => {
     if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current);
     setIsAIThinking(false);
+    setAiError(null);
+    setGameKey(k => k + 1);
     setGameState(createInitialState());
     setUiState(INITIAL_UI_STATE);
   }, []);
@@ -72,26 +81,29 @@ export function useGame(config: GameConfig) {
   }, [playerSide]);
 
   const handleSquareClick = useCallback((pos: Position) => {
-    setUiState(prev => {
-      const gs = gameStateRef.current;
-      if (gs.gameOver) return prev;
-      if (gs.currentTurn !== playerSide) return prev;
-      if (!prev.selectedPiece) return prev;
+    // Read current values from refs — safe to call both setters at the top level
+    // (not inside each other's updater, which would be unsafe under concurrent React).
+    const gs = gameStateRef.current;
+    const prevUi = uiStateRef.current;
 
-      const isValid = prev.validMoves.some(m => m.row === pos.row && m.col === pos.col);
-      if (!isValid) {
-        return { ...prev, selectedPiece: null, validMoves: [] };
-      }
+    if (gs.gameOver) return;
+    if (gs.currentTurn !== playerSide) return;
+    if (!prevUi.selectedPiece) return;
 
-      const from = prev.selectedPiece.position;
-      const move: Move = { from, to: pos, pieceId: prev.selectedPiece.id };
-      setGameState(current => makeMove(current, from, pos));
+    const isValid = prevUi.validMoves.some(m => m.row === pos.row && m.col === pos.col);
+    if (!isValid) {
+      setUiState(prev => ({ ...prev, selectedPiece: null, validMoves: [] }));
+      return;
+    }
 
-      return { selectedPiece: null, validMoves: [], lastMove: move };
-    });
+    const from = prevUi.selectedPiece.position;
+    const move: Move = { from, to: pos, pieceId: prevUi.selectedPiece.id };
+    setGameState(current => makeMove(current, from, pos));
+    setUiState({ selectedPiece: null, validMoves: [], lastMove: move });
   }, [playerSide]);
 
-  // AI turn
+  // AI turn — gameKey in deps so effect re-fires after newGame() even when
+  // currentTurn is structurally identical (e.g. defender config: attackers → reset → attackers).
   useEffect(() => {
     if (gameState.gameOver || gameState.currentTurn !== aiSide) {
       return;
@@ -108,9 +120,12 @@ export function useGame(config: GameConfig) {
         if (move) {
           setGameState(prev => makeMove(prev, move.from, move.to));
           setUiState(prev => ({ ...prev, lastMove: move }));
+        } else {
+          setAiError('AI could not find a move. Please start a new game.');
         }
       } catch (err) {
         console.error('AI move error:', err);
+        setAiError('An error occurred during the AI turn. Please start a new game.');
       } finally {
         setIsAIThinking(false);
       }
@@ -123,7 +138,7 @@ export function useGame(config: GameConfig) {
       setIsAIThinking(false);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState.currentTurn, gameState.gameOver, aiSide, config.difficulty]);
+  }, [gameState.currentTurn, gameState.gameOver, gameKey, aiSide, config.difficulty]);
 
   const gameDuration = gameState.gameOver
     ? Math.floor((Date.now() - gameState.startTime) / 1000)
@@ -133,6 +148,7 @@ export function useGame(config: GameConfig) {
     gameState,
     uiState,
     isAIThinking,
+    aiError,
     newGame,
     handlePieceClick,
     handleSquareClick,

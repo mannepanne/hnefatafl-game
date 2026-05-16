@@ -26,13 +26,9 @@ stats.post("/stats/anonymous-games", async (c) => {
     return c.json({ error: "rate_limited" }, 429);
   }
 
-  // Increment hit counter (reset TTL each time to keep a sliding window per first request)
+  // Sliding window — always write with TTL so the window resets on every request.
   const newHits = hits + 1;
-  if (hits === 0) {
-    await c.env.KV.put(rateLimitKey, String(newHits), { expirationTtl: RATE_WINDOW_TTL });
-  } else {
-    await c.env.KV.put(rateLimitKey, String(newHits));
-  }
+  await c.env.KV.put(rateLimitKey, String(newHits), { expirationTtl: RATE_WINDOW_TTL });
 
   // Increment the global counter
   const rawCount = await c.env.KV.get(COUNTER_KEY);

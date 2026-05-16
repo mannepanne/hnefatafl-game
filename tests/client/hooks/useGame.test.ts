@@ -247,11 +247,32 @@ describe('useGame — newGame race condition', () => {
 
     act(() => { result.current.newGame(); });
 
-    // Fast-forward past the original delay — the cancelled timeout should NOT fire
+    // Fast-forward past the delay. If clearTimeout failed, both the cancelled timeout
+    // and the new-game timeout would fire against the fresh state → moveCount = 2.
+    // Exactly 1 confirms only the fresh game's AI moved (the cancelled one did not fire).
     act(() => { vi.advanceTimersByTime(2000); });
 
-    // Move count should still be 0 (fresh game) not 1
-    expect(result.current.gameState.moveCount).toBe(0);
+    expect(result.current.gameState.moveCount).toBe(1);
+  });
+
+  it('AI re-dispatches after newGame() in defender config (regression: same currentTurn)', () => {
+    // When player is defenders, AI (attackers) moves first — currentTurn starts as 'attackers'.
+    // After newGame(), currentTurn resets to 'attackers' again — structurally identical.
+    // Without startTime in the effect deps, React would skip the re-run and AI would never move.
+    const { result } = renderHook(() => useGame(defenderConfig));
+    expect(result.current.isAIThinking).toBe(true);
+
+    act(() => { result.current.newGame(); });
+
+    // New game — AI should start thinking again
+    expect(result.current.isAIThinking).toBe(true);
+
+    // Advance past the think delay
+    act(() => { vi.advanceTimersByTime(1500); });
+
+    // AI moved in the fresh game
+    expect(result.current.gameState.moveCount).toBe(1);
+    expect(result.current.isAIThinking).toBe(false);
   });
 
   it('newGame resets uiState', () => {
