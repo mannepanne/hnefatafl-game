@@ -119,7 +119,7 @@ Replace this template guidance with your actual phase list when you:
 
 Development is organised into eight sequential phases mapped to three shippable milestones. Each phase includes scope, acceptance criteria, testing strategy, and PR workflow.
 
-**Current phase:** Phase 1 — Foundation (scaffolding in progress on `feature/phase-1-foundation`).
+**Current phase:** Phase 2 — Game engine + AI (engine, AI, and tests in progress on `feature/phase-2-game-engine-and-ai`).
 
 ### v0.1 — Anonymous play
 

@@ -40,7 +40,7 @@ When asked to remember anything, add project memory in this CLAUDE.md (project r
 
 **Key integrations:** none external. Everything runs on Cloudflare. See ADR [2026-05-12-cloudflare-only-stack.md](./REFERENCE/decisions/2026-05-12-cloudflare-only-stack.md).
 
-**Current status:** Phase 1 (Foundation) in progress on `feature/phase-1-foundation`.
+**Current status:** Phase 2 (Game engine + AI) in progress on `feature/phase-2-game-engine-and-ai`.
 
 ## Implementation phases
 
@@ -62,7 +62,7 @@ Eight phases mapped to three shippable milestones:
 
 **Phases 4–8 are stubs.** They capture shape and dependencies; each gets re-drafted in full when its turn comes, using [`SPECIFICATIONS/00-TEMPLATE-phase.md`](./SPECIFICATIONS/00-TEMPLATE-phase.md).
 
-**Current phase:** Phase 1 (Foundation) — scaffolding in progress.
+**Current phase:** Phase 2 (Game engine + AI) — engine, AI, and tests in progress.
 
 ### SPECIFICATIONS/
 - Numbered phase files (active work-in-progress)
