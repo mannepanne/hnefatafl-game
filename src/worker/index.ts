@@ -3,9 +3,11 @@
 
 import { Hono } from "hono";
 import { health } from "./routes/health";
+import { stats } from "./routes/stats";
 
 const api = new Hono<{ Bindings: Env }>();
 api.route("/", health);
+api.route("/", stats);
 
 const app = new Hono<{ Bindings: Env }>();
 app.route("/api", api);
