@@ -219,27 +219,24 @@ bunx wrangler secret list
 CI runs two jobs:
 
 1. **`ci`** — install → typecheck → test → build. Runs on every push and PR.
-2. **`deploy`** — `bun run deploy` (Wrangler). Runs only on push to `main`, after `ci` passes. Requires `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets (see below).
+2. **`deploy`** — `bun run deploy` (Wrangler) + smoke test (`GET /api/health`). Runs only on push to `main`, after `ci` passes.
 
 Merging to `main` automatically deploys to production. For manual deploys: `bun run deploy`.
 
-**Actions are pinned to commit SHAs** (not floating `@v4`/`@v2` tags) — if any upstream action repo is compromised, a malicious release cannot exfiltrate `CLOUDFLARE_API_TOKEN`. The current pins in `ci.yml` are:
+**Actions are pinned to commit SHAs** (not floating `@v4`/`@v2` tags) — see `.github/workflows/ci.yml` for current pins. Bump alongside dependency updates; Dependabot/Renovate handles this automatically once configured.
 
-```yaml
-- uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
-- uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
-- uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6  # v2.2.0
-```
+**If a deploy fails:** the smoke test retries five times with backoff. If it still fails, two recovery paths:
 
-Bump these alongside any other dependency-pin update — Dependabot/Renovate handles this automatically once configured.
+1. **`bunx wrangler rollback`** — rolls back to the previous deployment on Cloudflare (fastest; no commit needed)
+2. **Revert and redeploy** — `git revert HEAD && git push` triggers a fresh CI + deploy run
 
-Three repository secrets need to be set in **GitHub → Settings → Secrets and variables → Actions**:
+Two repository secrets and one variable are required in **GitHub → Settings → Secrets and variables → Actions**:
 
-| Secret | Where to get it |
-|---|---|
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare dashboard → Workers & Pages → right sidebar, "Account ID" |
-| `CLOUDFLARE_DATABASE_ID` | Output of `wrangler d1 create` (step 2 above) |
-| `CLOUDFLARE_API_TOKEN` | Cloudflare dashboard → My Profile → API Tokens → Create Token |
+| Name | Type | Where to get it |
+|---|---|---|
+| `CLOUDFLARE_API_TOKEN` | Secret | Cloudflare dashboard → My Profile → API Tokens → Create Token |
+| `CLOUDFLARE_DATABASE_ID` | Secret | Output of `wrangler d1 create` (step 2 above) |
+| `CLOUDFLARE_ACCOUNT_ID` | Variable | Cloudflare dashboard → Workers & Pages → right sidebar, "Account ID" |
 
 For `CLOUDFLARE_API_TOKEN`, use a **Custom Token** with this minimum scope:
 
