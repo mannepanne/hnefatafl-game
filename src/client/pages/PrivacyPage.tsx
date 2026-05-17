@@ -29,7 +29,7 @@ export default function PrivacyPage({ onBack }: PrivacyPageProps) {
         <div className="max-w-2xl mx-auto px-6 py-8 space-y-8" style={{ fontFamily: 'Cormorant Garamond, serif' }}>
           <section>
             <p className="text-[#8b7a68] text-sm tracking-wider uppercase mb-4" style={{ fontFamily: 'Cinzel, serif' }}>
-              Last Updated &middot; 16 May 2026
+              Last Updated &middot; 17 May 2026
             </p>
           </section>
 
@@ -72,10 +72,16 @@ export default function PrivacyPage({ onBack }: PrivacyPageProps) {
               This is a single integer stored site-wide &mdash; no individual game, device, or session
               is identified. It is used purely to display a "games played" figure on the menu screen.
             </p>
-            <p className="text-[#5c4a38] leading-relaxed text-base">
+            <p className="text-[#5c4a38] leading-relaxed text-base mb-3">
               To prevent artificial inflation of this counter, your IP address is temporarily noted
               to enforce a rate limit. IP addresses are never stored beyond the rate-limit window
               and are never linked to game data or used for any other purpose.
+            </p>
+            <p className="text-[#5c4a38] leading-relaxed text-base">
+              We also use Cloudflare Web Analytics to collect anonymous page view statistics. This
+              records which pages are visited, the referring page, approximate country of origin, and
+              browser type &mdash; all in aggregate. No cookies are set, no individual visitor is
+              identified, and the data is not linked to any personal information.
             </p>
           </section>
 
@@ -87,10 +93,11 @@ export default function PrivacyPage({ onBack }: PrivacyPageProps) {
               What We Do Not Collect
             </h2>
             <p className="text-[#5c4a38] leading-relaxed text-base">
-              We do not use tracking pixels or any form of cross-site tracking.
-              We do not collect your location, device fingerprint, or browsing habits beyond this site.
-              We do not set any non-essential cookies. All game logic runs in your browser; no move
-              or game state is ever sent to a server.
+              We do not use cross-site tracking or personal profiling. Page view analytics captures
+              approximate country of origin but does not store or forward your IP address. We do not
+              collect a device fingerprint or browsing habits beyond this site. We do not set any
+              cookies. All game logic runs in your browser; no move or game state is ever sent to
+              a server.
             </p>
           </section>
 
