@@ -46,7 +46,7 @@ export const leaderboardProfiles = sqliteTable(
     userId: text("user_id").primaryKey().notNull(),
     displayName: text("display_name").notNull(),
     isPublic: integer("is_public").notNull().default(0),
-    isAdmin: integer("is_admin").notNull().default(0),
+    isAdmin: integer("is_admin").notNull().default(0), // Phase 8 admin panel only — no current Worker consumer; placement (here vs separate admins table) is an explicit Phase 5 decision point (TD-011)
     totalWins: integer("total_wins").notNull().default(0),
     totalLosses: integer("total_losses").notNull().default(0),
     bestTimeSeconds: integer("best_time_seconds"),
@@ -83,7 +83,7 @@ export const siteStats = sqliteTable(
   {
     id: integer("id").primaryKey().default(1).notNull(),
     totalAnonymousGames: integer("total_anonymous_games").notNull().default(0),
-    totalRegisteredGames: integer("total_registered_games").notNull().default(0),
+    totalRegisteredGames: integer("total_registered_games").notNull().default(0), // No writer until Phase 5
     updatedAt: text("updated_at")
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),

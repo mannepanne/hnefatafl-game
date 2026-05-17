@@ -86,8 +86,17 @@ Items here are accepted risks or pragmatic choices made during development, not 
 - **Issue:** POST endpoints have no Origin/Referer check. For v0.1's anonymous vanity counter the risk is low (no auth token or user data at stake). However, the same absence will be a critical gap on Phase 5 magic-link token endpoints where a CSRF-forged POST could trigger unwanted token delivery.
 - **Why accepted:** CSRF protection is disproportionate for an unauthenticated, low-value counter. The correct fix is a shared Origin-check middleware applied to all state-mutating endpoints, designed once alongside Phase 5 auth work rather than retrofitted piecemeal now.
 - **Risk:** Low for Phase 3; High before Phase 5 ships.
-- **Future fix:** Implement Origin/Referer check middleware before Phase 5 ships. Apply to all POST endpoints that handle auth tokens or account mutations.
+- **Future fix:** Implement Origin/Referer check middleware before Phase 5 ships. Apply to all POST endpoints that handle auth tokens or account mutations. **This must be an acceptance criterion and merge gate in the Phase 5 spec — do not ship Phase 5 without it.**
 - **Phase introduced:** Phase 3 (3D board and gameplay loop)
+
+### TD-011: `is_admin` placement is unresolved inherited debt
+
+- **Location:** `src/db/schema.ts` — `leaderboard_profiles.is_admin`
+- **Issue:** `is_admin` is on the public `leaderboard_profiles` table (inherited from the prototype), where it mixes concerns: public profile data and privileged access control sit in the same row. The prototype carried a Supabase RLS-recursion bug from this pattern (stack overflow when the RLS policy queried the same table). That specific bug cannot happen in a Worker, but the design pressure to split or constrain the column remains. The column has no current Worker consumer — Phase 8 admin panel is the first real caller.
+- **Why accepted:** Resolving the placement now (before Phase 5 adds FK relationships and before Phase 8 defines admin UI) risks rework. The correct decision point is when the Phase 5 schema is finalised — at that point the table structure is locked in by FKs and migrations become harder to change.
+- **Risk:** Low now; Medium if Phase 8 ships without an explicit decision (silent tech debt baked into the admin surface).
+- **Future fix:** The Phase 5 spec must explicitly decide: keep `is_admin` on `leaderboard_profiles`, move it to a separate `admins` table, or add additional constraints (e.g. only settable via a privileged worker endpoint). Do not carry it forward implicitly into Phase 8.
+- **Phase introduced:** Phase 4 (D1 schema)
 
 ### TD-005: Replay-regression test suite is opt-in, not gating
 - **Location:** `tests/shared/game/replay-regression.test.ts`
