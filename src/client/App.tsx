@@ -8,6 +8,7 @@ import MenuPage from '@/client/pages/MenuPage';
 import GamePage from '@/client/pages/GamePage';
 import RulesPage from '@/client/pages/RulesPage';
 import PrivacyPage from '@/client/pages/PrivacyPage';
+import PlaceholderPage from '@/client/pages/PlaceholderPage';
 
 interface GameConfig {
   side: Side;
@@ -51,17 +52,7 @@ export function App() {
   }
 
   if (isPlaceholderView(view)) {
-    return (
-      <div className="min-h-screen bg-[#f5f0e8] flex flex-col items-center justify-center" style={{ fontFamily: 'Cinzel, serif' }}>
-        <p className="text-[#8b7a68] text-sm tracking-[0.3em] uppercase mb-6">Coming soon</p>
-        <button
-          onClick={() => setView('menu')}
-          className="text-[#8b7a68] hover:text-[#3a2a1a] text-xs tracking-[0.2em] uppercase transition-colors"
-        >
-          &larr; Back to Menu
-        </button>
-      </div>
-    );
+    return <PlaceholderPage onBack={() => setView('menu')} />;
   }
 
   return (

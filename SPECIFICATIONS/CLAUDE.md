@@ -119,7 +119,7 @@ Replace this template guidance with your actual phase list when you:
 
 Development is organised into eight sequential phases mapped to three shippable milestones. Each phase includes scope, acceptance criteria, testing strategy, and PR workflow.
 
-**Current phase:** Phase 2 — Game engine + AI (engine, AI, and tests in progress on `feature/phase-2-game-engine-and-ai`).
+**Current phase:** Phase 3 — 3D board and gameplay loop (PR B: pages + router in progress on `feature/phase-3-pr-b-pages-and-router`).
 
 ### v0.1 — Anonymous play
 

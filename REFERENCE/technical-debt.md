@@ -56,6 +56,14 @@ Items here are accepted risks or pragmatic choices made during development, not 
 - **Future fix:** Replace with a Durable Object counter if the stat is ever surfaced as a credibility signal (marketing copy, leaderboard seed, etc.). Until then, do not cite the counter in external communications.
 - **Phase introduced:** Phase 3 (3D board and gameplay loop)
 
+### TD-007: No browser history sync in SPA router
+- **Location:** `src/client/App.tsx` — `getInitialView()`, `App()`
+- **Issue:** `getInitialView()` reads `window.location.pathname` once on mount; view transitions call `setView()` with no `pushState`. Browser back/forward won't navigate between views, and the URL stays `/privacy` after returning to menu.
+- **Why accepted:** Spec explicitly rules out `react-router` for v0.1, and the only real views are not deep-linkable by design. The `/privacy` deep link works on initial load, which is sufficient for the cookie consent use-case.
+- **Risk:** Low — cosmetic UX limitation; no data loss, no broken functionality.
+- **Future fix:** Add `pushState` calls in the view-transition handlers and a `popstate` listener in `App`. Required before leaderboard/profile URLs become shareable in v1.0.
+- **Phase introduced:** Phase 3 (3D board and gameplay loop)
+
 ### TD-005: Replay-regression test suite is opt-in, not gating
 - **Location:** `tests/shared/game/replay-regression.test.ts`
 - **Issue:** The replay-regression suite runs only when `RUN_REPLAY=1` is set. A breaking engine change could pass CI without triggering the replay suite.
