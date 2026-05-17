@@ -80,6 +80,15 @@ Items here are accepted risks or pragmatic choices made during development, not 
 - **Future fix:** Move `getAIMove()` to a Web Worker (using `comlink` or Cloudflare's `useWorker` pattern) before adding harder difficulty tiers that push past the 250ms threshold.
 - **Phase introduced:** Phase 3 (3D board and gameplay loop)
 
+### TD-010: No CSRF / Origin check on POST endpoints
+
+- **Location:** `src/worker/routes/stats.ts` — POST `/api/stats/anonymous-games`
+- **Issue:** POST endpoints have no Origin/Referer check. For v0.1's anonymous vanity counter the risk is low (no auth token or user data at stake). However, the same absence will be a critical gap on Phase 5 magic-link token endpoints where a CSRF-forged POST could trigger unwanted token delivery.
+- **Why accepted:** CSRF protection is disproportionate for an unauthenticated, low-value counter. The correct fix is a shared Origin-check middleware applied to all state-mutating endpoints, designed once alongside Phase 5 auth work rather than retrofitted piecemeal now.
+- **Risk:** Low for Phase 3; High before Phase 5 ships.
+- **Future fix:** Implement Origin/Referer check middleware before Phase 5 ships. Apply to all POST endpoints that handle auth tokens or account mutations.
+- **Phase introduced:** Phase 3 (3D board and gameplay loop)
+
 ### TD-005: Replay-regression test suite is opt-in, not gating
 - **Location:** `tests/shared/game/replay-regression.test.ts`
 - **Issue:** The replay-regression suite runs only when `RUN_REPLAY=1` is set. A breaking engine change could pass CI without triggering the replay suite.

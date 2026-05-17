@@ -5,7 +5,7 @@ import { useRef, useMemo, useState, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
-import type { GameState, Position, Piece } from '@/shared/game/types';
+import type { GameState, Position, Piece, Side } from '@/shared/game/types';
 import type { UIState } from '@/client/hooks/useGame';
 import { BOARD_SIZE, isThrone, isCorner, samePos } from '@/shared/game/index';
 import OrnatePiece, { OrnatePieceBody } from '@/client/components/game/OrnatePiece';
@@ -15,7 +15,7 @@ interface Board3DProps {
   uiState: UIState;
   onSquareClick: (pos: Position) => void;
   onPieceClick: (piece: Piece) => void;
-  playerSide: 'attackers' | 'defenders';
+  playerSide: Side;
 }
 
 // ─── Materials ──────────────────────────────────────────────
@@ -423,6 +423,7 @@ function Scene({ gameState, uiState, onSquareClick, onPieceClick, playerSide }: 
     const newDying: DyingPiece[] = [];
 
     for (const [id, piece] of prevPieceIds.current) {
+      // King capture ends the game immediately; Board3D unmounts before the animation could play.
       if (!currentIds.has(id) && piece.type !== 'king') {
         newDying.push({ piece, time: Date.now(), id });
       }
@@ -522,6 +523,10 @@ export default function Board3D(props: Board3DProps) {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+
+  // Reset cursor on unmount — pointer events inside the Canvas don't fire onPointerOut
+  // when a piece is captured mid-hover or when the user navigates away.
+  useEffect(() => () => { document.body.style.cursor = ''; }, []);
 
   useEffect(() => {
     const el = containerRef.current;

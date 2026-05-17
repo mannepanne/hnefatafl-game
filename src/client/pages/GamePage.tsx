@@ -22,6 +22,7 @@ export default function GamePage({ playerSide, difficulty, onBackToMenu }: GameP
     gameState,
     uiState,
     isAIThinking,
+    aiError,
     newGame,
     handlePieceClick,
     handleSquareClick,
@@ -105,6 +106,19 @@ export default function GamePage({ playerSide, difficulty, onBackToMenu }: GameP
       <div className="flex-1 flex flex-col lg:flex-row min-h-0 relative">
         {/* Board */}
         <div className="flex-1 min-h-0 relative">
+          {aiError && (
+            <div className="absolute top-0 left-0 right-0 z-30 px-4 py-2.5 bg-[#3a1a0a]/90 backdrop-blur-sm text-[#f5e6d0] text-sm flex items-center justify-between gap-3">
+              <span>{aiError}</span>
+              <button
+                onClick={newGame}
+                className="shrink-0 px-3 py-1 bg-[#5a2a0a]/80 hover:bg-[#6b3a1a] border border-[#c4a87a]/40 rounded text-xs tracking-wider uppercase font-semibold transition-colors"
+                style={{ fontFamily: 'Cinzel, serif' }}
+              >
+                New Game
+              </button>
+            </div>
+          )}
+
           <Board3D
             gameState={gameState}
             uiState={uiState}

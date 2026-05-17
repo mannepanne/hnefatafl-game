@@ -1,5 +1,5 @@
 // ABOUT: Anonymous player identity card shown in the GamePage side panel.
-// ABOUT: Replaces the authenticated PlayerIdentity for v0.1 anonymous-only play.
+// ABOUT: Anonymous player identity card shown in the GamePage side panel for v0.1 anonymous-only play.
 
 export default function WandererLabel() {
   return (
