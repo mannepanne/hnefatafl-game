@@ -131,6 +131,7 @@ grep -r "authentication" REFERENCE/decisions/
 
 **Format:** Listed chronologically (newest first)
 
+- [2026-05-17 — Pin R3F to v8, Drei to v9, three.js to 0.176.0 for React 18 compatibility](./2026-05-17-r3f-r18-version-lock.md) — R3F v9 requires React 19; exact-pin the trio to the last tested set that works with React 18. Re-evaluate when migrating to React 19 in v0.2.
 - [2026-05-16 — `getValidMoves` and `getAllMovesForSide` accept `GameState`, not raw board](./2026-05-16-getvalidmoves-state-signature.md) — full `GameState` parameter instead of `(Piece | null)[][]`; one explicit cast at the single call site in `makeMove` where only a locally-built board is available.
 - [2026-05-16 — Phase 2 purity boundary — injectable dependencies, dropped UI state](./2026-05-16-phase2-purity-boundary.md) — `Math.random`, `Date.now()`, and `IdCounter` are injectable; `selectedPiece`/`validMoves`/`lastMove` removed from `GameState`. Enables deterministic tests without module mocking.
 - [2026-05-12 — Build the port on a pure Cloudflare stack (no Supabase)](./2026-05-12-cloudflare-only-stack.md) — every backend primitive (compute, DB, object storage, KV, email, bot challenge) is Cloudflare; trade Supabase RLS for explicit Worker-side authorisation. Cost is the binding constraint.

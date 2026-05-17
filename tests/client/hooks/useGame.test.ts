@@ -29,11 +29,10 @@ describe('useGame — initial state', () => {
     expect(result.current.gameState.moveCount).toBe(0);
   });
 
-  it('uiState starts with no selection and no lastMove', () => {
+  it('uiState starts with no selection and no valid moves', () => {
     const { result } = renderHook(() => useGame(attackerConfig));
     expect(result.current.uiState.selectedPiece).toBeNull();
     expect(result.current.uiState.validMoves).toHaveLength(0);
-    expect(result.current.uiState.lastMove).toBeNull();
   });
 });
 
@@ -165,22 +164,7 @@ describe('useGame — handleSquareClick interaction contract', () => {
 
     expect(result.current.gameState.moveCount).toBe(1);
     expect(result.current.uiState.selectedPiece).toBeNull();
-    expect(result.current.uiState.lastMove).not.toBeNull();
-    expect(result.current.uiState.lastMove?.to).toEqual(target);
-  });
-
-  it('lastMove is cleared on newGame', () => {
-    const { result } = renderHook(() => useGame(attackerConfig));
-    const gs = createInitialState();
-    const movesForSide = getAllMovesForSide(gs, 'attackers');
-    const entry = movesForSide[0]!;
-
-    act(() => { result.current.handlePieceClick(entry.piece); });
-    act(() => { result.current.handleSquareClick(entry.moves[0]!); });
-    expect(result.current.uiState.lastMove).not.toBeNull();
-
-    act(() => { result.current.newGame(); });
-    expect(result.current.uiState.lastMove).toBeNull();
+    expect(result.current.uiState.validMoves).toHaveLength(0);
   });
 });
 
@@ -287,7 +271,6 @@ describe('useGame — newGame race condition', () => {
 
     expect(result.current.uiState.selectedPiece).toBeNull();
     expect(result.current.uiState.validMoves).toHaveLength(0);
-    expect(result.current.uiState.lastMove).toBeNull();
   });
 });
 

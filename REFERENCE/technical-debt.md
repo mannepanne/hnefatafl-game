@@ -64,6 +64,31 @@ Items here are accepted risks or pragmatic choices made during development, not 
 - **Future fix:** Add `pushState` calls in the view-transition handlers and a `popstate` listener in `App`. Required before leaderboard/profile URLs become shareable in v1.0.
 - **Phase introduced:** Phase 3 (3D board and gameplay loop)
 
+### TD-008: No keyboard navigation on the 3D board
+- **Location:** `src/client/components/game/Board3D.tsx`
+- **Issue:** The board is fully mouse/touch-driven. There is no keyboard interface for selecting pieces or moving them, so users who cannot use a pointer device cannot play.
+- **Why accepted:** Phase 3 focus is a working 3D board for the happy path. Keyboard nav on a 3D canvas is non-trivial (requires focus management, virtual cursor, and R3F accessibility hooks). No accessibility requirement for v0.1.
+- **Risk:** Low — solo-maintainer, no stated accessibility requirement for launch.
+- **Future fix:** Add a keyboard overlay or accessible board view (likely a companion 2D grid rendered in the DOM) before any public marketing that would attract a broader audience.
+- **Phase introduced:** Phase 3 (3D board and gameplay loop)
+
+### TD-009: AI runs on the main thread
+- **Location:** `src/client/hooks/useGame.ts` — AI `setTimeout` callback
+- **Issue:** `getAIMove()` runs synchronously on the main thread inside a `setTimeout`. On Jarl difficulty with the full beam-search tree, this can block the UI thread for ~200–250ms, causing a visible jank frame before the AI move is applied.
+- **Why accepted:** A Web Worker would require serialising and deserialising the full game state on every turn, adding complexity disproportionate to the current beam-search depth. The 250ms budget is met for all three difficulty levels on modern hardware.
+- **Risk:** Low — visible only at Jarl on slower devices; no correctness impact.
+- **Future fix:** Move `getAIMove()` to a Web Worker (using `comlink` or Cloudflare's `useWorker` pattern) before adding harder difficulty tiers that push past the 250ms threshold.
+- **Phase introduced:** Phase 3 (3D board and gameplay loop)
+
+### TD-010: No CSRF / Origin check on POST endpoints
+
+- **Location:** `src/worker/routes/stats.ts` — POST `/api/stats/anonymous-games`
+- **Issue:** POST endpoints have no Origin/Referer check. For v0.1's anonymous vanity counter the risk is low (no auth token or user data at stake). However, the same absence will be a critical gap on Phase 5 magic-link token endpoints where a CSRF-forged POST could trigger unwanted token delivery.
+- **Why accepted:** CSRF protection is disproportionate for an unauthenticated, low-value counter. The correct fix is a shared Origin-check middleware applied to all state-mutating endpoints, designed once alongside Phase 5 auth work rather than retrofitted piecemeal now.
+- **Risk:** Low for Phase 3; High before Phase 5 ships.
+- **Future fix:** Implement Origin/Referer check middleware before Phase 5 ships. Apply to all POST endpoints that handle auth tokens or account mutations.
+- **Phase introduced:** Phase 3 (3D board and gameplay loop)
+
 ### TD-005: Replay-regression test suite is opt-in, not gating
 - **Location:** `tests/shared/game/replay-regression.test.ts`
 - **Issue:** The replay-regression suite runs only when `RUN_REPLAY=1` is set. A breaking engine change could pass CI without triggering the replay suite.

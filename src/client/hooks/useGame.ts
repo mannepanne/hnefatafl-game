@@ -2,7 +2,7 @@
 // ABOUT: AI think-delay lives here (300/500/800ms per difficulty) not in the AI module.
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { GameState, Position, Piece, Side, Move } from '@/shared/game/types';
+import type { GameState, Position, Piece, Side } from '@/shared/game/types';
 import type { Difficulty } from '@/shared/game/types';
 import { createInitialState, makeMove, getValidMoves } from '@/shared/game/engine';
 import { getAIMove } from '@/shared/game/ai';
@@ -10,7 +10,6 @@ import { getAIMove } from '@/shared/game/ai';
 export interface UIState {
   selectedPiece: Piece | null;
   validMoves: Position[];
-  lastMove: Move | null;
 }
 
 export interface GameConfig {
@@ -21,7 +20,6 @@ export interface GameConfig {
 const INITIAL_UI_STATE: UIState = {
   selectedPiece: null,
   validMoves: [],
-  lastMove: null,
 };
 
 const THINK_DELAY: Record<Difficulty, number> = {
@@ -97,9 +95,8 @@ export function useGame(config: GameConfig) {
     }
 
     const from = prevUi.selectedPiece.position;
-    const move: Move = { from, to: pos, pieceId: prevUi.selectedPiece.id };
     setGameState(current => makeMove(current, from, pos));
-    setUiState({ selectedPiece: null, validMoves: [], lastMove: move });
+    setUiState({ selectedPiece: null, validMoves: [] });
   }, [playerSide]);
 
   // AI turn — gameKey in deps so effect re-fires after newGame() even when
@@ -119,7 +116,6 @@ export function useGame(config: GameConfig) {
         const move = getAIMove(current, config.difficulty, aiSide);
         if (move) {
           setGameState(prev => makeMove(prev, move.from, move.to));
-          setUiState(prev => ({ ...prev, lastMove: move }));
         } else {
           setAiError('AI could not find a move. Please start a new game.');
         }
