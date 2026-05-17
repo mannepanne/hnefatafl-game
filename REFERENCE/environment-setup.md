@@ -18,8 +18,8 @@ Everything runs on Cloudflare. There are no external services to wire up in Phas
 |---|---|---|
 | Cloudflare Worker | SPA host + API | Phase 1 |
 | Static Assets binding | Serves the built React SPA | Phase 1 |
-| D1 database | SQLite, primary data store | Phase 1 (schema fills out in Phase 4) |
-| KV namespace | Magic-link tokens, rate-limit buckets, anonymous counters | Phase 1 (smoke binding only; real keys land in Phase 4/5) |
+| D1 database | SQLite, primary data store | Phase 1 (real schema added in Phase 4) |
+| KV namespace | Magic-link tokens, rate-limit buckets | Phase 1 (rate-limit keys active from Phase 3; magic-link tokens in Phase 5) |
 | Custom Domain | `hnefatafl.hultberg.org` | Phase 1 |
 | R2 bucket | Piece textures | Phase 7 |
 | Email Sending (beta) | Magic-link emails | Phase 5 |
