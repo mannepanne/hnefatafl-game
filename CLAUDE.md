@@ -40,7 +40,7 @@ When asked to remember anything, add project memory in this CLAUDE.md (project r
 
 **Key integrations:** none external. Everything runs on Cloudflare. See ADR [2026-05-12-cloudflare-only-stack.md](./REFERENCE/decisions/2026-05-12-cloudflare-only-stack.md).
 
-**Current status:** Phase 3 (3D board and gameplay loop) in progress — PR C (3D board, game components, and gameplay loop) open on `feature/phase-3-pr-c-3d-board`.
+**Current status:** Phase 3 (3D board and gameplay loop) complete — v0.1 merged to main. Phase 4 (D1 schema + anonymous stats) is next.
 
 ## Implementation phases
 
@@ -62,7 +62,7 @@ Eight phases mapped to three shippable milestones:
 
 **Phases 4–8 are stubs.** They capture shape and dependencies; each gets re-drafted in full when its turn comes, using [`SPECIFICATIONS/00-TEMPLATE-phase.md`](./SPECIFICATIONS/00-TEMPLATE-phase.md).
 
-**Current phase:** Phase 3 (3D board and gameplay loop) — PR C in progress.
+**Current phase:** Phase 4 (D1 schema + anonymous stats) — not yet started.
 
 ### SPECIFICATIONS/
 - Numbered phase files (active work-in-progress)

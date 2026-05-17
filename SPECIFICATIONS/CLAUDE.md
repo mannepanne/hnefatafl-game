@@ -119,7 +119,7 @@ Replace this template guidance with your actual phase list when you:
 
 Development is organised into eight sequential phases mapped to three shippable milestones. Each phase includes scope, acceptance criteria, testing strategy, and PR workflow.
 
-**Current phase:** Phase 3 — 3D board and gameplay loop (PR C: 3D board, game components, and gameplay loop in progress on `feature/phase-3-pr-c-3d-board`).
+**Current phase:** Phase 4 — D1 schema + anonymous stats (not yet started; stub spec at [`04-d1-schema-and-anonymous-stats.md`](./04-d1-schema-and-anonymous-stats.md)).
 
 ### v0.1 — Anonymous play
 
