@@ -49,7 +49,9 @@ const migrations = [
         \`total_anonymous_games\` integer DEFAULT 0 NOT NULL,
         \`total_registered_games\` integer DEFAULT 0 NOT NULL,
         \`updated_at\` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
-        CONSTRAINT "site_stats_singleton" CHECK("site_stats"."id" = 1)
+        CONSTRAINT "site_stats_singleton" CHECK("site_stats"."id" = 1),
+        CONSTRAINT "site_stats_anonymous_games_check" CHECK("site_stats"."total_anonymous_games" >= 0),
+        CONSTRAINT "site_stats_registered_games_check" CHECK("site_stats"."total_registered_games" >= 0)
       )`,
     ],
   },

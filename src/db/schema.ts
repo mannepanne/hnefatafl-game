@@ -90,5 +90,13 @@ export const siteStats = sqliteTable(
   },
   (table) => [
     check("site_stats_singleton", sql`${table.id} = 1`),
+    check(
+      "site_stats_anonymous_games_check",
+      sql`${table.totalAnonymousGames} >= 0`,
+    ),
+    check(
+      "site_stats_registered_games_check",
+      sql`${table.totalRegisteredGames} >= 0`,
+    ),
   ],
 );

@@ -48,13 +48,13 @@ Items here are accepted risks or pragmatic choices made during development, not 
 - **Future fix:** Add alpha-beta as an opt-in parameter to `minimax()` for a stronger difficulty tier (e.g. Konungr) post-v1.0.
 - **Phase introduced:** Phase 2 (game engine + AI)
 
-### TD-006: Anonymous games counter is vulnerable to inflation and not trustworthy as a metric
+### TD-006: Rate-limit bucket is vulnerable to per-IP cap bypass across Cloudflare PoPs
 - **Location:** `src/worker/routes/stats.ts` — POST `/api/stats/anonymous-games`
-- **Issue:** Two concurrent POSTs from one IP can both pass the rate-limit check before either increments the counter (KV read-modify-write with no atomicity). Additionally, KV is eventually consistent (~60 s cross-region), so an attacker hitting from multiple Cloudflare PoPs can bypass the per-IP cap. The counter is also trivially inflated by proxy pools, as there is no per-session deduplication. The correct fix is a Durable Object for atomic increments, but that adds complexity and cost.
-- **Why accepted:** The only consequence is counter inflation — no auth bypass, no data exfiltration. The counter is a vanity stat, not a billing or eligibility signal. A Durable Object is disproportionate for a Free-plan single-player game.
+- **Issue:** The counter increment itself is atomic (`db.batch([UPDATE, SELECT])` in D1), but the rate-limit check uses KV, which is eventually consistent (~60 s cross-region). Two concurrent POSTs from the same IP hitting different Cloudflare PoPs can both pass the rate-limit check before either write propagates, allowing the per-IP cap to be exceeded. Additionally, the `CF-Connecting-IP ?? "unknown"` fallback buckets all requests without that header into a single shared key, inflating the hit count for unrelated legitimate requests on the same edge node. The counter is also trivially inflated by proxy pools, as there is no per-session deduplication.
+- **Why accepted:** The only consequence is counter inflation — no auth bypass, no data exfiltration. The counter is a vanity stat, not a billing or eligibility signal. A Durable Object rate-limiter would be disproportionate for a Free-plan single-player game.
 - **Risk:** Low — impact is a meaningless number being wrong.
-- **Future fix:** Replace with a Durable Object counter if the stat is ever surfaced as a credibility signal (marketing copy, leaderboard seed, etc.). Until then, do not cite the counter in external communications.
-- **Phase introduced:** Phase 3 (3D board and gameplay loop)
+- **Future fix:** If the counter is ever surfaced as a credibility signal (marketing copy, leaderboard seed, etc.), replace the KV rate-limit key with a Durable Object. Until then, do not cite the counter in external communications.
+- **Phase introduced:** Phase 3 (3D board and gameplay loop); KV→D1 counter migration in Phase 4
 
 ### TD-007: No browser history sync in SPA router
 - **Location:** `src/client/App.tsx` — `getInitialView()`, `App()`

@@ -102,9 +102,9 @@ export default function PrivacyPage({ onBack }: PrivacyPageProps) {
               How Data Is Stored
             </h2>
             <p className="text-[#5c4a38] leading-relaxed text-base">
-              The anonymous games counter is stored in Cloudflare KV, which provides encryption at
-              rest and in transit. The rate-limit record is also held in Cloudflare KV and expires
-              automatically. No data is stored outside Cloudflare infrastructure.
+              The anonymous games counter is stored in Cloudflare D1 (SQLite). The rate-limit
+              record is held in Cloudflare KV and expires automatically. No data is stored outside
+              Cloudflare infrastructure.
             </p>
           </section>
 
