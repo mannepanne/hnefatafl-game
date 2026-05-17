@@ -119,7 +119,7 @@ Replace this template guidance with your actual phase list when you:
 
 Development is organised into eight sequential phases mapped to three shippable milestones. Each phase includes scope, acceptance criteria, testing strategy, and PR workflow.
 
-**Current phase:** Phase 4 — D1 schema + anonymous stats (not yet started; stub spec at [`04-d1-schema-and-anonymous-stats.md`](./04-d1-schema-and-anonymous-stats.md)).
+**Current phase:** Phase 5 — magic-link auth (not yet started; stub spec at [`05-magic-link-auth.md`](./05-magic-link-auth.md)).
 
 ### v0.1 — Anonymous play
 
@@ -134,8 +134,8 @@ Development is organised into eight sequential phases mapped to three shippable 
 
 ### v0.2 — Accounts
 
-4. **[04-d1-schema-and-anonymous-stats.md](./04-d1-schema-and-anonymous-stats.md)** — *stub spec*
-   D1 schema (`game_results`, `leaderboard_profiles`, `site_stats`). Migrate anonymous counter from KV to D1.
+4. **[04-d1-schema-and-anonymous-stats.md](./ARCHIVE/04-d1-schema-and-anonymous-stats.md)** ✓ complete
+   D1 schema (`game_results`, `leaderboard_profiles`, `site_stats`). Anonymous counter migrated from KV to D1.
 
 5. **[05-magic-link-auth.md](./05-magic-link-auth.md)** — *stub spec*
    Magic-link sign-in, `Emailer` interface with two providers, per-user game results. **v0.2 ships at the end of this phase.**
@@ -151,7 +151,7 @@ Development is organised into eight sequential phases mapped to three shippable 
 8. **[08-admin-and-contact.md](./08-admin-and-contact.md)** — *stub spec*
    Admin panel, contact form, Turnstile, final feature-parity sweep. **v1.0 ships at the end of this phase.**
 
-**Stub specs (Phases 4–8)** are intentionally light. Each gets re-drafted in full using [`00-TEMPLATE-phase.md`](./00-TEMPLATE-phase.md) when its turn comes — details would go stale before then.
+**Stub specs (Phases 5–8)** are intentionally light. Each gets re-drafted in full using [`00-TEMPLATE-phase.md`](./00-TEMPLATE-phase.md) when its turn comes — details would go stale before then.
 
 ### Supporting documentation
 

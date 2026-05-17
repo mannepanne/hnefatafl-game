@@ -40,7 +40,7 @@ When asked to remember anything, add project memory in this CLAUDE.md (project r
 
 **Key integrations:** none external. Everything runs on Cloudflare. See ADR [2026-05-12-cloudflare-only-stack.md](./REFERENCE/decisions/2026-05-12-cloudflare-only-stack.md).
 
-**Current status:** Phase 3 (3D board and gameplay loop) complete — v0.1 merged to main. Phase 4 (D1 schema + anonymous stats) is next.
+**Current status:** Phase 4 (D1 schema + anonymous stats) complete. Phase 5 (magic-link auth) is next.
 
 ## Implementation phases
 
@@ -52,7 +52,7 @@ Eight phases mapped to three shippable milestones:
 3. [03-3d-board-and-gameplay-loop.md](./SPECIFICATIONS/03-3d-board-and-gameplay-loop.md) — 3D board, gameplay loop, v0.1 ships (7–10 days)
 
 **v0.2 — Accounts**
-4. [04-d1-schema-and-anonymous-stats.md](./SPECIFICATIONS/04-d1-schema-and-anonymous-stats.md) — D1 schema, anonymous counter migrated from KV (stub spec)
+4. [04-d1-schema-and-anonymous-stats.md](./SPECIFICATIONS/ARCHIVE/04-d1-schema-and-anonymous-stats.md) — D1 schema, anonymous counter migrated from KV ✓
 5. [05-magic-link-auth.md](./SPECIFICATIONS/05-magic-link-auth.md) — Magic-link authentication, v0.2 ships (stub spec)
 
 **v1.0 — Full game**
@@ -60,9 +60,9 @@ Eight phases mapped to three shippable milestones:
 7. [07-r2-textured-pieces.md](./SPECIFICATIONS/07-r2-textured-pieces.md) — R2-hosted textured piece style (stub spec)
 8. [08-admin-and-contact.md](./SPECIFICATIONS/08-admin-and-contact.md) — Admin panel + contact form, v1.0 ships (stub spec)
 
-**Phases 4–8 are stubs.** They capture shape and dependencies; each gets re-drafted in full when its turn comes, using [`SPECIFICATIONS/00-TEMPLATE-phase.md`](./SPECIFICATIONS/00-TEMPLATE-phase.md).
+**Phases 5–8 are stubs.** They capture shape and dependencies; each gets re-drafted in full when its turn comes, using [`SPECIFICATIONS/00-TEMPLATE-phase.md`](./SPECIFICATIONS/00-TEMPLATE-phase.md).
 
-**Current phase:** Phase 4 (D1 schema + anonymous stats) — not yet started.
+**Current phase:** Phase 5 (magic-link auth) — not yet started.
 
 ### SPECIFICATIONS/
 - Numbered phase files (active work-in-progress)
