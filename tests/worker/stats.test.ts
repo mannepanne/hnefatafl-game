@@ -1,15 +1,16 @@
 // ABOUT: Tests for /api/stats/anonymous-games — GET count, POST increment, IP rate limit.
-// ABOUT: Uses the Worker runtime via SELF.fetch; KV is seeded via env binding.
+// ABOUT: Counter backed by D1 site_stats; rate-limit keys remain in KV.
 
-import { SELF, env } from "cloudflare:test";
-import { describe, it, expect, beforeEach } from "vitest";
+import { SELF, env, applyD1Migrations } from "cloudflare:test";
+import { describe, it, expect, beforeAll, beforeEach } from "vitest";
+import { phase4Migrations } from "../helpers/migrations";
 
 const URL = "https://example.com/api/stats/anonymous-games";
 
 async function getCount(): Promise<number> {
   const res = await SELF.fetch(URL);
   expect(res.status).toBe(200);
-  const body = await res.json() as { count: number };
+  const body = (await res.json()) as { count: number };
   return body.count;
 }
 
@@ -21,9 +22,15 @@ async function postIncrement(ip = "1.2.3.4"): Promise<Response> {
 }
 
 describe("GET /api/stats/anonymous-games", () => {
+  beforeAll(async () => {
+    await applyD1Migrations(env.DB, phase4Migrations);
+  });
+
   beforeEach(async () => {
-    // Clear KV between tests
-    await env.KV.delete("stats:anonymous-games");
+    // Reset counter between tests
+    await env.DB.prepare(
+      "UPDATE site_stats SET total_anonymous_games = 0 WHERE id = 1",
+    ).run();
   });
 
   it("returns 200 with count=0 when no games recorded", async () => {
@@ -31,17 +38,26 @@ describe("GET /api/stats/anonymous-games", () => {
     expect(count).toBe(0);
   });
 
-  it("returns the current count after increments", async () => {
-    await env.KV.put("stats:anonymous-games", "42");
+  it("returns the current count after a direct D1 update", async () => {
+    await env.DB.prepare(
+      "UPDATE site_stats SET total_anonymous_games = 42 WHERE id = 1",
+    ).run();
     const count = await getCount();
     expect(count).toBe(42);
   });
 });
 
 describe("POST /api/stats/anonymous-games", () => {
+  beforeAll(async () => {
+    await applyD1Migrations(env.DB, phase4Migrations);
+  });
+
   beforeEach(async () => {
-    await env.KV.delete("stats:anonymous-games");
-    // Clear any rate-limit keys for test IPs
+    // Reset D1 counter
+    await env.DB.prepare(
+      "UPDATE site_stats SET total_anonymous_games = 0 WHERE id = 1",
+    ).run();
+    // Clear rate-limit keys for test IPs
     const list = await env.KV.list({ prefix: "ratelimit:stats:" });
     for (const key of list.keys) {
       await env.KV.delete(key.name);
@@ -51,7 +67,7 @@ describe("POST /api/stats/anonymous-games", () => {
   it("returns 200 and increments the counter", async () => {
     const res = await postIncrement();
     expect(res.status).toBe(200);
-    const body = await res.json() as { count: number };
+    const body = (await res.json()) as { count: number };
     expect(body.count).toBe(1);
   });
 

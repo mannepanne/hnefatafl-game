@@ -1,17 +1,18 @@
 // ABOUT: Anonymous-games stats route. GET returns the current counter; POST increments it.
-// ABOUT: Rate-limited to 10 increments per IP per hour via KV TTL'd keys.
+// ABOUT: Rate-limited to 10 increments per IP per hour via KV TTL'd keys. Counter stored in D1.
 
 import { Hono } from "hono";
 
-const COUNTER_KEY = "stats:anonymous-games";
 const RATE_LIMIT = 10;
 const RATE_WINDOW_TTL = 3600; // seconds
 
 export const stats = new Hono<{ Bindings: Env }>();
 
 stats.get("/stats/anonymous-games", async (c) => {
-  const raw = await c.env.KV.get(COUNTER_KEY);
-  const count = raw ? parseInt(raw, 10) : 0;
+  const row = await c.env.DB.prepare(
+    "SELECT total_anonymous_games FROM site_stats WHERE id = 1",
+  ).first<{ total_anonymous_games: number }>();
+  const count = row?.total_anonymous_games ?? 0;
   return c.json({ count });
 });
 
@@ -30,10 +31,18 @@ stats.post("/stats/anonymous-games", async (c) => {
   const newHits = hits + 1;
   await c.env.KV.put(rateLimitKey, String(newHits), { expirationTtl: RATE_WINDOW_TTL });
 
-  // Increment the global counter
-  const rawCount = await c.env.KV.get(COUNTER_KEY);
-  const count = (rawCount ? parseInt(rawCount, 10) : 0) + 1;
-  await c.env.KV.put(COUNTER_KEY, String(count));
-
+  // Atomic batch: increment then read in a single D1 round-trip.
+  const now = new Date().toISOString();
+  const batchResults = await c.env.DB.batch([
+    c.env.DB.prepare(
+      "UPDATE site_stats SET total_anonymous_games = total_anonymous_games + 1, updated_at = ? WHERE id = 1",
+    ).bind(now),
+    c.env.DB.prepare(
+      "SELECT total_anonymous_games FROM site_stats WHERE id = 1",
+    ),
+  ]);
+  const count =
+    (batchResults[1]?.results[0] as { total_anonymous_games: number } | undefined)
+      ?.total_anonymous_games ?? 0;
   return c.json({ count });
 });

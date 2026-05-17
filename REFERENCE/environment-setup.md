@@ -101,7 +101,12 @@ Copy **only** `id` into `wrangler.toml` (replacing the placeholder). Keep our `b
 
 ### 4. Apply the initial D1 migration
 
-The migration in `src/db/migrations/0000_pipeline_check.sql` creates the `_pipeline_check` table so we can prove the binding works end to end. (It gets dropped in Phase 4 once the real schema lands.)
+Two migration files create the real schema:
+
+- `src/db/migrations/0000_orange_vindicator.sql` — Drizzle-generated DDL. Creates `game_results`, `leaderboard_profiles`, and `site_stats` (with CHECK constraints). Also drops the legacy `_pipeline_check` placeholder table if present.
+- `src/db/migrations/0001_site_stats_seed.sql` — Hand-authored. Seeds the `site_stats` singleton row (`INSERT OR IGNORE INTO site_stats (id) VALUES (1)`). `INSERT OR IGNORE` is idempotent so it is safe on replays and CI double-applies.
+
+**Note:** `db:apply:local` uses `wrangler d1 migrations apply` (folder-based, tracked via a `d1_migrations` table in D1), not `drizzle-kit migrate`. The Drizzle journal (`src/db/migrations/meta/_journal.json`) only lists `0000_orange_vindicator` — this is intentional. Do not run `drizzle-kit migrate` for deployments.
 
 ```bash
 # Apply locally (Miniflare-backed D1, file under .wrangler/state/)

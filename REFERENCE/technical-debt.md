@@ -48,13 +48,13 @@ Items here are accepted risks or pragmatic choices made during development, not 
 - **Future fix:** Add alpha-beta as an opt-in parameter to `minimax()` for a stronger difficulty tier (e.g. Konungr) post-v1.0.
 - **Phase introduced:** Phase 2 (game engine + AI)
 
-### TD-006: Anonymous games counter is vulnerable to inflation and not trustworthy as a metric
+### TD-006: Rate-limit bucket is vulnerable to per-IP cap bypass across Cloudflare PoPs
 - **Location:** `src/worker/routes/stats.ts` — POST `/api/stats/anonymous-games`
-- **Issue:** Two concurrent POSTs from one IP can both pass the rate-limit check before either increments the counter (KV read-modify-write with no atomicity). Additionally, KV is eventually consistent (~60 s cross-region), so an attacker hitting from multiple Cloudflare PoPs can bypass the per-IP cap. The counter is also trivially inflated by proxy pools, as there is no per-session deduplication. The correct fix is a Durable Object for atomic increments, but that adds complexity and cost.
-- **Why accepted:** The only consequence is counter inflation — no auth bypass, no data exfiltration. The counter is a vanity stat, not a billing or eligibility signal. A Durable Object is disproportionate for a Free-plan single-player game.
+- **Issue:** The counter increment itself is atomic (`db.batch([UPDATE, SELECT])` in D1), but the rate-limit check uses KV, which is eventually consistent (~60 s cross-region). Two concurrent POSTs from the same IP hitting different Cloudflare PoPs can both pass the rate-limit check before either write propagates, allowing the per-IP cap to be exceeded. Additionally, the `CF-Connecting-IP ?? "unknown"` fallback buckets all requests without that header into a single shared key, inflating the hit count for unrelated legitimate requests on the same edge node. The counter is also trivially inflated by proxy pools, as there is no per-session deduplication.
+- **Why accepted:** The only consequence is counter inflation — no auth bypass, no data exfiltration. The counter is a vanity stat, not a billing or eligibility signal. A Durable Object rate-limiter would be disproportionate for a Free-plan single-player game.
 - **Risk:** Low — impact is a meaningless number being wrong.
-- **Future fix:** Replace with a Durable Object counter if the stat is ever surfaced as a credibility signal (marketing copy, leaderboard seed, etc.). Until then, do not cite the counter in external communications.
-- **Phase introduced:** Phase 3 (3D board and gameplay loop)
+- **Future fix:** If the counter is ever surfaced as a credibility signal (marketing copy, leaderboard seed, etc.), replace the KV rate-limit key with a Durable Object. Until then, do not cite the counter in external communications.
+- **Phase introduced:** Phase 3 (3D board and gameplay loop); KV→D1 counter migration in Phase 4
 
 ### TD-007: No browser history sync in SPA router
 - **Location:** `src/client/App.tsx` — `getInitialView()`, `App()`
@@ -86,8 +86,17 @@ Items here are accepted risks or pragmatic choices made during development, not 
 - **Issue:** POST endpoints have no Origin/Referer check. For v0.1's anonymous vanity counter the risk is low (no auth token or user data at stake). However, the same absence will be a critical gap on Phase 5 magic-link token endpoints where a CSRF-forged POST could trigger unwanted token delivery.
 - **Why accepted:** CSRF protection is disproportionate for an unauthenticated, low-value counter. The correct fix is a shared Origin-check middleware applied to all state-mutating endpoints, designed once alongside Phase 5 auth work rather than retrofitted piecemeal now.
 - **Risk:** Low for Phase 3; High before Phase 5 ships.
-- **Future fix:** Implement Origin/Referer check middleware before Phase 5 ships. Apply to all POST endpoints that handle auth tokens or account mutations.
+- **Future fix:** Implement Origin/Referer check middleware before Phase 5 ships. Apply to all POST endpoints that handle auth tokens or account mutations. **This must be an acceptance criterion and merge gate in the Phase 5 spec — do not ship Phase 5 without it.**
 - **Phase introduced:** Phase 3 (3D board and gameplay loop)
+
+### TD-011: `is_admin` placement is unresolved inherited debt
+
+- **Location:** `src/db/schema.ts` — `leaderboard_profiles.is_admin`
+- **Issue:** `is_admin` is on the public `leaderboard_profiles` table (inherited from the prototype), where it mixes concerns: public profile data and privileged access control sit in the same row. The prototype carried a Supabase RLS-recursion bug from this pattern (stack overflow when the RLS policy queried the same table). That specific bug cannot happen in a Worker, but the design pressure to split or constrain the column remains. The column has no current Worker consumer — Phase 8 admin panel is the first real caller.
+- **Why accepted:** Resolving the placement now (before Phase 5 adds FK relationships and before Phase 8 defines admin UI) risks rework. The correct decision point is when the Phase 5 schema is finalised — at that point the table structure is locked in by FKs and migrations become harder to change.
+- **Risk:** Low now; Medium if Phase 8 ships without an explicit decision (silent tech debt baked into the admin surface).
+- **Future fix:** The Phase 5 spec must explicitly decide: keep `is_admin` on `leaderboard_profiles`, move it to a separate `admins` table, or add additional constraints (e.g. only settable via a privileged worker endpoint). Do not carry it forward implicitly into Phase 8.
+- **Phase introduced:** Phase 4 (D1 schema)
 
 ### TD-005: Replay-regression test suite is opt-in, not gating
 - **Location:** `tests/shared/game/replay-regression.test.ts`
