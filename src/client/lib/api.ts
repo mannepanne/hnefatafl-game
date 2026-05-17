@@ -7,3 +7,7 @@ export async function fetchAnonymousGamesCount(): Promise<number> {
   const data = (await res.json()) as { count: unknown };
   return typeof data?.count === 'number' ? data.count : 0;
 }
+
+export async function incrementAnonymousGamesCount(): Promise<void> {
+  await fetch('/api/stats/anonymous-games', { method: 'POST' }).catch(() => {});
+}
