@@ -24,11 +24,16 @@
 - Leaderboard UI — Phase 6.
 - Profile UI — Phase 6.
 
+## Implementation notes (added after Phase 3)
+
+- **D1 binding already provisioned.** `wrangler.toml` has a D1 binding from Phase 1. Phase 4 only needs to author and apply migrations — no infra setup required.
+- **Counter migration scope.** `src/worker/routes/stats.ts` uses KV for two things: the counter (`stats:anonymous-games`) and per-IP rate limiting (`ratelimit:stats:<ip>`). Phase 4 replaces the counter with a D1 `site_stats` row; the rate-limit keys stay in KV.
+
 ## Open questions for this phase
 
-- **Rate-limit migration:** does the per-IP rate limit move to D1 too, or stay in KV? Default: keep in KV (KV is the right tool for short-TTL data; D1 is for durable rows). Confirm when drafting.
+- **Rate-limit migration:** does the per-IP rate limit move to D1 too, or stay in KV? **Decided: keep in KV** — KV is the right tool for short-TTL data; D1 is for durable rows.
 - **Schema fidelity:** the prototype's schema uses Postgres-specific types (`UUID`, `TIMESTAMP WITH TIME ZONE`). D1 is SQLite — UUIDs become `TEXT` with a default of `lower(hex(randomblob(16)))` or generated app-side; timestamps become `INTEGER` (unix epoch ms) or `TEXT` ISO-8601. Pick one approach consistently. Default: app-generated UUIDs (`crypto.randomUUID()`), ISO-8601 `TEXT` for timestamps.
-- **`site_stats` row identity:** the prototype uses a singleton row. D1 doesn't enforce this naturally; we either constrain it with a CHECK or just always use a known primary key value (`'global'`). Default: known PK `'global'`.
+- **`site_stats` row identity:** the prototype uses `id = 1` INTEGER PK with `CHECK id = 1`. **Decided: match the prototype** — INTEGER PK aliases to SQLite rowid (efficient), and it avoids deviating from the prototype without reason.
 
 ## Prototype references
 - [`spec-database.md`](./ORIGINAL_IDEA/ClaudeShipSource/spec-database.md)
