@@ -1,5 +1,5 @@
-// ABOUT: Drizzle schema for the D1 database — game_results, leaderboard_profiles, site_stats.
-// ABOUT: Phase 5 adds email auth: email column, UNIQUE display_name index, FK with ON DELETE CASCADE, drops aggregate columns.
+// ABOUT: Drizzle schema for the D1 database — leaderboard_profiles, game_results, site_stats.
+// ABOUT: leaderboard_profiles: user accounts (email, display name, visibility). game_results: per-user game history with FK cascade. site_stats: singleton counter row.
 
 import { sqliteTable, integer, text, check, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
