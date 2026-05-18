@@ -8,6 +8,13 @@
       "when": 1779011508993,
       "tag": "0000_orange_vindicator",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1747612800000,
+      "tag": "0002_phase5_auth_schema",
+      "breakpoints": true
     }
   ]
 }

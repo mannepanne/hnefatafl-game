@@ -98,6 +98,33 @@ Items here are accepted risks or pragmatic choices made during development, not 
 - **Future fix:** The Phase 5 spec must explicitly decide: keep `is_admin` on `leaderboard_profiles`, move it to a separate `admins` table, or add additional constraints (e.g. only settable via a privileged worker endpoint). Do not carry it forward implicitly into Phase 8.
 - **Phase introduced:** Phase 4 (D1 schema)
 
+### TD-013: `SELECT *` in `__new_game_results` INSERT during Phase 5 migration
+
+- **Location:** `src/db/migrations/0002_phase5_auth_schema.sql` — `INSERT INTO __new_game_results SELECT * FROM game_results`
+- **Issue:** Uses `SELECT *` rather than an explicit column list (inconsistent with the `leaderboard_profiles` rebuild in the same migration which uses named columns). Safe now because `game_results` columns are stable at this point, but a copy-paste footgun for future migrations.
+- **Why accepted:** No correctness risk at time of writing; explicit columns would require listing all 8 columns which adds verbosity without benefit right now.
+- **Risk:** Low — only a maintenance concern if a future migration copies this pattern and the schema has changed.
+- **Future fix:** If `game_results` is rebuilt again in a later migration, use an explicit column list.
+- **Phase introduced:** Phase 5 (magic-link auth)
+
+### TD-014: `REFERENCE/environment-setup.md` not updated for Phase 5 secrets and bindings
+
+- **Location:** `REFERENCE/environment-setup.md`
+- **Issue:** The new `SESSION_SECRET` secret, `SEND_EMAIL` binding, `EMAIL_PROVIDER` / `APP_URL` / `FROM_EMAIL` vars, and the `.dev.vars` override for local email are not documented. The Cloudflare Email Sending setup steps (dashboard routing rule, verified sender address) are also missing.
+- **Why accepted:** Auth routes that actually use these aren't built yet (Chunk 2). Documenting them now before the feature is wired up invites stale docs.
+- **Risk:** Medium — without this, setting up a new environment will require reading the code rather than the docs.
+- **Future fix:** Update `environment-setup.md` at the end of Chunk 2, once all secrets and bindings are exercised.
+- **Phase introduced:** Phase 5 Chunk 1
+
+### TD-015: `MIGRATIONS.md` not updated to list `0002_phase5_auth_schema.sql`
+
+- **Location:** `src/db/migrations/MIGRATIONS.md`
+- **Issue:** The migrations index table lists only `0000` and `0001`; `0002_phase5_auth_schema.sql` is missing. The journal description note is also stale (still references only `0000_orange_vindicator`).
+- **Why accepted:** Minor doc gap; wrangler applies all SQL files regardless of whether they appear in MIGRATIONS.md.
+- **Risk:** Low — operational, not correctness.
+- **Future fix:** Update MIGRATIONS.md before or alongside Chunk 2 PR.
+- **Phase introduced:** Phase 5 Chunk 1
+
 ### TD-005: Replay-regression test suite is opt-in, not gating
 - **Location:** `tests/shared/game/replay-regression.test.ts`
 - **Issue:** The replay-regression suite runs only when `RUN_REPLAY=1` is set. A breaking engine change could pass CI without triggering the replay suite.

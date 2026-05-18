@@ -1,4 +1,4 @@
-// ABOUT: Shared Phase 4 migration DDL for integration tests — imported by d1-binding and stats suites.
+// ABOUT: Shared migration DDL for integration tests — imported by d1-binding, stats, and auth suites.
 
 export const phase4Migrations = [
   {
@@ -51,5 +51,55 @@ export const phase4Migrations = [
   {
     name: "0001_site_stats_seed",
     queries: ["INSERT OR IGNORE INTO site_stats (id) VALUES (1)"],
+  },
+];
+
+export const phase5Migrations = [
+  ...phase4Migrations,
+  {
+    name: "0002_phase5_auth_schema",
+    queries: [
+      "PRAGMA foreign_keys = OFF",
+      `CREATE TABLE \`__new_leaderboard_profiles\` (
+        \`user_id\` text PRIMARY KEY NOT NULL,
+        \`email\` text NOT NULL,
+        \`display_name\` text NOT NULL,
+        \`is_public\` integer DEFAULT 0 NOT NULL,
+        \`is_admin\` integer DEFAULT 0 NOT NULL,
+        \`created_at\` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+        \`updated_at\` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+        CONSTRAINT "leaderboard_profiles_email_unique" UNIQUE(\`email\`),
+        CONSTRAINT "leaderboard_profiles_display_name_check" CHECK(length(\`display_name\`) BETWEEN 1 AND 32),
+        CONSTRAINT "leaderboard_profiles_is_public_check" CHECK(\`is_public\` IN (0, 1)),
+        CONSTRAINT "leaderboard_profiles_is_admin_check" CHECK(\`is_admin\` IN (0, 1))
+      )`,
+      `INSERT INTO \`__new_leaderboard_profiles\`(\`user_id\`, \`email\`, \`display_name\`, \`is_public\`, \`is_admin\`, \`created_at\`, \`updated_at\`)
+        SELECT \`user_id\`, \`user_id\` || '@migration.invalid', \`display_name\`, \`is_public\`, \`is_admin\`, \`created_at\`, \`updated_at\`
+        FROM \`leaderboard_profiles\``,
+      "DROP TABLE `leaderboard_profiles`",
+      "ALTER TABLE `__new_leaderboard_profiles` RENAME TO `leaderboard_profiles`",
+      "CREATE UNIQUE INDEX `idx_leaderboard_profiles_display_name` ON `leaderboard_profiles` (`display_name`)",
+      `CREATE TABLE \`__new_game_results\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`user_id\` text NOT NULL,
+        \`won\` integer NOT NULL,
+        \`player_side\` text NOT NULL,
+        \`difficulty\` text NOT NULL,
+        \`duration_seconds\` integer NOT NULL,
+        \`move_count\` integer NOT NULL,
+        \`played_at\` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+        CONSTRAINT "game_results_won_check" CHECK(\`won\` IN (0, 1)),
+        CONSTRAINT "game_results_player_side_check" CHECK(\`player_side\` IN ('attackers', 'defenders')),
+        CONSTRAINT "game_results_difficulty_check" CHECK(\`difficulty\` IN ('thrall', 'karl', 'jarl')),
+        CONSTRAINT "game_results_duration_check" CHECK(\`duration_seconds\` >= 0),
+        CONSTRAINT "game_results_move_count_check" CHECK(\`move_count\` >= 0),
+        FOREIGN KEY (\`user_id\`) REFERENCES \`leaderboard_profiles\`(\`user_id\`) ON UPDATE no action ON DELETE cascade
+      )`,
+      "INSERT INTO `__new_game_results` SELECT * FROM `game_results`",
+      "DROP TABLE `game_results`",
+      "ALTER TABLE `__new_game_results` RENAME TO `game_results`",
+      "CREATE INDEX `idx_game_results_user_id` ON `game_results` (`user_id`)",
+      "PRAGMA foreign_keys = ON",
+    ],
   },
 ];

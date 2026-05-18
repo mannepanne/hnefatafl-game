@@ -1,0 +1,274 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "c9528ca6-4752-455b-9d32-54c548674b69",
+  "prevId": "aacd7b8f-b962-4cc6-8926-0728064aab1e",
+  "tables": {
+    "game_results": {
+      "name": "game_results",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "won": {
+          "name": "won",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "player_side": {
+          "name": "player_side",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "difficulty": {
+          "name": "difficulty",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "duration_seconds": {
+          "name": "duration_seconds",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "move_count": {
+          "name": "move_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "played_at": {
+          "name": "played_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "idx_game_results_user_id": {
+          "name": "idx_game_results_user_id",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "game_results_user_id_leaderboard_profiles_user_id_fk": {
+          "name": "game_results_user_id_leaderboard_profiles_user_id_fk",
+          "tableFrom": "game_results",
+          "tableTo": "leaderboard_profiles",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "user_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "game_results_won_check": {
+          "name": "game_results_won_check",
+          "value": "\"game_results\".\"won\" IN (0, 1)"
+        },
+        "game_results_player_side_check": {
+          "name": "game_results_player_side_check",
+          "value": "\"game_results\".\"player_side\" IN ('attackers', 'defenders')"
+        },
+        "game_results_difficulty_check": {
+          "name": "game_results_difficulty_check",
+          "value": "\"game_results\".\"difficulty\" IN ('thrall', 'karl', 'jarl')"
+        },
+        "game_results_duration_check": {
+          "name": "game_results_duration_check",
+          "value": "\"game_results\".\"duration_seconds\" >= 0"
+        },
+        "game_results_move_count_check": {
+          "name": "game_results_move_count_check",
+          "value": "\"game_results\".\"move_count\" >= 0"
+        }
+      }
+    },
+    "leaderboard_profiles": {
+      "name": "leaderboard_profiles",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "is_public": {
+          "name": "is_public",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "is_admin": {
+          "name": "is_admin",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "idx_leaderboard_profiles_display_name": {
+          "name": "idx_leaderboard_profiles_display_name",
+          "columns": [
+            "display_name"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "leaderboard_profiles_email_unique": {
+          "name": "leaderboard_profiles_email_unique",
+          "columns": [
+            "email"
+          ]
+        }
+      },
+      "checkConstraints": {
+        "leaderboard_profiles_display_name_check": {
+          "name": "leaderboard_profiles_display_name_check",
+          "value": "length(\"leaderboard_profiles\".\"display_name\") BETWEEN 1 AND 32"
+        },
+        "leaderboard_profiles_is_public_check": {
+          "name": "leaderboard_profiles_is_public_check",
+          "value": "\"leaderboard_profiles\".\"is_public\" IN (0, 1)"
+        },
+        "leaderboard_profiles_is_admin_check": {
+          "name": "leaderboard_profiles_is_admin_check",
+          "value": "\"leaderboard_profiles\".\"is_admin\" IN (0, 1)"
+        }
+      }
+    },
+    "site_stats": {
+      "name": "site_stats",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "total_anonymous_games": {
+          "name": "total_anonymous_games",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "total_registered_games": {
+          "name": "total_registered_games",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "site_stats_singleton": {
+          "name": "site_stats_singleton",
+          "value": "\"site_stats\".\"id\" = 1"
+        },
+        "site_stats_anonymous_games_check": {
+          "name": "site_stats_anonymous_games_check",
+          "value": "\"site_stats\".\"total_anonymous_games\" >= 0"
+        },
+        "site_stats_registered_games_check": {
+          "name": "site_stats_registered_games_check",
+          "value": "\"site_stats\".\"total_registered_games\" >= 0"
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

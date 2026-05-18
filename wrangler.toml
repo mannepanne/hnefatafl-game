@@ -18,5 +18,13 @@ migrations_dir = "src/db/migrations"
 binding = "KV"
 id = "1a195241770d49e2b0bda17c858899e9"
 
+[[send_email]]
+name = "SEND_EMAIL"
+
+[vars]
+EMAIL_PROVIDER = "cloudflare"
+APP_URL = "https://hnefatafl.hultberg.org"
+FROM_EMAIL = "noreply@hnefatafl.hultberg.org"
+
 [observability]
 enabled = true
