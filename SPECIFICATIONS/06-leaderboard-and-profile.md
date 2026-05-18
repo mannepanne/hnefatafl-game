@@ -31,6 +31,7 @@
 
 - **React Query vs `swr` vs hand-rolled fetch + `useState`:** prototype uses React Query. Worth re-evaluating now that the API surface is small. Default: keep React Query for parity unless bundle size becomes a concern.
 - **Username display:** prototype shows email-local-part. Confirm; consider opaque IDs if we're worried about email enumeration via leaderboard.
+- **Editable username:** Phase 5 derives username from email local-part and enforces uniqueness. Phase 6 must add a UI for users to change it (profile page is the natural home). New username must still pass the UNIQUE constraint; surface a clear error if taken.
 - **Edge caching policy:** which routes benefit, and what TTL? Default: 60s on leaderboard list; no cache on per-user profile.
 
 ## Prototype references
