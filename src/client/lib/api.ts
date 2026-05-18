@@ -11,3 +11,14 @@ export async function fetchAnonymousGamesCount(): Promise<number> {
 export async function incrementAnonymousGamesCount(): Promise<void> {
   await fetch('/api/stats/anonymous-games', { method: 'POST' }).catch(() => {});
 }
+
+export async function requestMagicLink(email: string): Promise<{ ok: true } | { error: string }> {
+  const res = await fetch('/api/auth/request-link', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  if (res.status === 429) return { error: 'rate_limit_exceeded' };
+  if (!res.ok) return { error: 'server_error' };
+  return { ok: true };
+}

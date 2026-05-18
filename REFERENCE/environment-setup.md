@@ -19,12 +19,13 @@ Everything runs on Cloudflare. There are no external services to wire up in Phas
 | Cloudflare Worker | SPA host + API | Phase 1 |
 | Static Assets binding | Serves the built React SPA | Phase 1 |
 | D1 database | SQLite, primary data store | Phase 1 (real schema added in Phase 4) |
-| KV namespace | Magic-link tokens, rate-limit buckets | Phase 1 (rate-limit keys active from Phase 3; magic-link tokens in Phase 5) |
+| KV namespace | Magic-link tokens, rate-limit buckets | Phase 1 (rate-limit keys active from Phase 3; magic-link tokens active from Phase 5) |
 | Custom Domain | `hnefatafl.hultberg.org` | Phase 1 |
+| Email Sending (beta) | Magic-link emails | Phase 5 ✓ |
+| `SESSION_SECRET` | HMAC-signed session cookies | Phase 5 ✓ |
 | R2 bucket | Piece textures | Phase 7 |
-| Email Sending (beta) | Magic-link emails | Phase 5 |
-| Resend (`hultberg.org`) | Email fallback | Phase 5 |
-| Turnstile | Bot challenge on magic-link request | Phase 5 |
+| Resend (`hultberg.org`) | Email fallback | Phase 5 (deferred — see ADR) |
+| Turnstile | Bot challenge on magic-link request | Phase 5 (deferred — see spec) |
 
 **Cost:** Cloudflare Free plan only. Anything that would push us off the free tier needs an ADR.
 
@@ -156,16 +157,23 @@ curl https://hnefatafl.hultberg.org/api/health
 
 ### `.dev.vars`
 
-Phase 1 doesn't need any secrets. The file lives at the project root and is gitignored. Add variables as they're introduced:
+The file lives at the project root and is gitignored. Copy `.dev.vars.example` to `.dev.vars` and fill in any values you need for local work:
 
 ```bash
-# Phase 5 onward — placeholders, not committed
-# EMAIL_PROVIDER=cloudflare        # or "resend"
-# RESEND_API_KEY=re_...
-# TURNSTILE_SECRET_KEY=0x4A...
+cp .dev.vars.example .dev.vars
 ```
 
 Wrangler auto-loads `.dev.vars` when running `wrangler dev` or `vite dev` with the Cloudflare plugin.
+
+From Phase 5 onward the following variables are relevant:
+
+| Variable | Dev default | Purpose |
+|---|---|---|
+| `EMAIL_PROVIDER` | `dev` | `dev` prints links to the console; `cloudflare` sends real emails |
+| `APP_URL` | `http://localhost:5173` | Base URL used to construct magic-link verify URLs |
+| `SESSION_SECRET` | any long random string | Signs HMAC-SHA256 session cookies — **must be secret in production** |
+
+**`SESSION_SECRET` in production** is set via `bunx wrangler secret put SESSION_SECRET` (see [Production secrets](#production-secrets) below), not in `.dev.vars` or `wrangler.toml`.
 
 ### Running the dev server
 
@@ -204,9 +212,20 @@ bun run db:apply       # wrangler d1 migrations apply --remote
 Use `bunx wrangler secret put` for anything sensitive. They're encrypted at rest in Cloudflare and surface as environment variables on the Worker.
 
 ```bash
-# Phase 5 onward — examples, not needed in Phase 1
+# Phase 5 — required
+bunx wrangler secret put SESSION_SECRET   # generate with: openssl rand -base64 48
+
+# Phase 5 — required if EMAIL_PROVIDER=resend (fallback only — see ADR)
 bunx wrangler secret put RESEND_API_KEY
+
+# Phase 5 — Turnstile bot protection (deferred — see spec)
 bunx wrangler secret put TURNSTILE_SECRET_KEY
+```
+
+Generate a strong `SESSION_SECRET`:
+
+```bash
+openssl rand -base64 48
 ```
 
 List what's currently set:

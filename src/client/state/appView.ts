@@ -15,7 +15,6 @@ export type AppView =
 // Views that are not yet implemented — renders a "coming soon" placeholder.
 const PLACEHOLDER_VIEWS: ReadonlySet<AppView> = new Set([
   'leaderboard',
-  'signin',
   'contact',
   'profile',
   'admin',

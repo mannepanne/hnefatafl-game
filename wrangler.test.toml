@@ -22,11 +22,9 @@ id = "1a195241770d49e2b0bda17c858899e9"
 name = "SEND_EMAIL"
 
 [vars]
-EMAIL_PROVIDER = "cloudflare"
+EMAIL_PROVIDER = "dev"
 APP_URL = "https://hnefatafl.hultberg.org"
 FROM_EMAIL = "noreply@hnefatafl.hultberg.org"
-# SESSION_SECRET is a Wrangler secret in production (wrangler secret put SESSION_SECRET).
-# This placeholder value is used only in local dev and tests — never in production.
 SESSION_SECRET = "dev-only-session-secret-not-used-in-production-replace-me"
 
 [observability]

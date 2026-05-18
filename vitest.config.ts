@@ -16,7 +16,7 @@ export default defineConfig({
         plugins: [
           cloudflareTest({
             main: "./src/worker/index.ts",
-            wrangler: { configPath: "./wrangler.toml" },
+            wrangler: { configPath: "./wrangler.test.toml" },
           }),
         ],
         resolve: { alias },

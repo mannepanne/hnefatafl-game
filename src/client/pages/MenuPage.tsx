@@ -17,9 +17,10 @@ interface MenuPageProps {
   onStartGame: (side: Side, difficulty: Difficulty) => void;
   onShowRules: () => void;
   onShowPrivacy: () => void;
+  onSignIn: () => void;
 }
 
-export default function MenuPage({ onStartGame, onShowRules, onShowPrivacy }: MenuPageProps) {
+export default function MenuPage({ onStartGame, onShowRules, onShowPrivacy, onSignIn }: MenuPageProps) {
   const [selectedSide, setSelectedSide] = useState<Side>('defenders');
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>('karl');
   const [gamesCount, setGamesCount] = useState<number | null>(null);
@@ -164,6 +165,13 @@ export default function MenuPage({ onStartGame, onShowRules, onShowPrivacy }: Me
             className="text-[#8b7a68] hover:text-[#3a2a1a] text-xs tracking-[0.2em] uppercase transition-colors"
           >
             How to Play
+          </button>
+          <span className="text-[#c4b8a8]">|</span>
+          <button
+            onClick={onSignIn}
+            className="text-[#8b7a68] hover:text-[#3a2a1a] text-xs tracking-[0.2em] uppercase transition-colors"
+          >
+            Sign In
           </button>
           <span className="text-[#c4b8a8]">|</span>
           <button

@@ -8,6 +8,7 @@ import MenuPage from '@/client/pages/MenuPage';
 import GamePage from '@/client/pages/GamePage';
 import RulesPage from '@/client/pages/RulesPage';
 import PrivacyPage from '@/client/pages/PrivacyPage';
+import SignInPage from '@/client/pages/SignInPage';
 import PlaceholderPage from '@/client/pages/PlaceholderPage';
 
 interface GameConfig {
@@ -18,6 +19,7 @@ interface GameConfig {
 function getInitialView(): AppView {
   const path = window.location.pathname;
   if (path === '/privacy') return 'privacy';
+  if (path === '/sign-in') return 'signin';
   return 'menu';
 }
 
@@ -51,6 +53,10 @@ export function App() {
     return <PrivacyPage onBack={() => setView('menu')} />;
   }
 
+  if (view === 'signin') {
+    return <SignInPage onBack={() => setView('menu')} />;
+  }
+
   if (isPlaceholderView(view)) {
     return <PlaceholderPage onBack={() => setView('menu')} />;
   }
@@ -60,6 +66,7 @@ export function App() {
       onStartGame={handleStartGame}
       onShowRules={() => setView('rules')}
       onShowPrivacy={() => setView('privacy')}
+      onSignIn={() => setView('signin')}
     />
   );
 }

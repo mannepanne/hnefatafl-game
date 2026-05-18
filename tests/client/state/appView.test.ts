@@ -3,8 +3,8 @@
 import { describe, it, expect } from 'vitest';
 import { isPlaceholderView, type AppView } from '../../../src/client/state/appView';
 
-const REAL_VIEWS: AppView[] = ['menu', 'game', 'rules', 'privacy'];
-const PLACEHOLDER_VIEWS: AppView[] = ['leaderboard', 'signin', 'contact', 'profile', 'admin'];
+const REAL_VIEWS: AppView[] = ['menu', 'game', 'rules', 'privacy', 'signin'];
+const PLACEHOLDER_VIEWS: AppView[] = ['leaderboard', 'contact', 'profile', 'admin'];
 
 describe('isPlaceholderView', () => {
   it.each(REAL_VIEWS)('returns false for real view: %s', view => {
