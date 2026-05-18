@@ -3,5 +3,4 @@
 
 declare interface Env {
   SESSION_SECRET: string;
-  RESEND_API_KEY?: string;
 }

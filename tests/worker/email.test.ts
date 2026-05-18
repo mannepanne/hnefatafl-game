@@ -1,9 +1,8 @@
 // ABOUT: Unit tests for the Emailer implementations and factory.
-// ABOUT: CloudflareEmailer, ResendEmailer, DevEmailer, createEmailer.
+// ABOUT: CloudflareEmailer, DevEmailer, and the shared email helpers.
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { CloudflareEmailer } from "@/worker/email/cloudflare-emailer";
-import { ResendEmailer } from "@/worker/email/resend-emailer";
 import { DevEmailer } from "@/worker/email/dev-emailer";
 import { magicLinkEmailBody, buildRawEmail } from "@/worker/email/emailer";
 
@@ -70,40 +69,6 @@ describe("CloudflareEmailer", () => {
     const emailer = new CloudflareEmailer(mockSendEmail, FROM);
 
     await expect(emailer.sendMagicLink(TO, URL)).rejects.toThrow("CF send error");
-  });
-});
-
-// --- ResendEmailer ---
-
-describe("ResendEmailer", () => {
-  beforeEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("posts to api.resend.com with the correct payload", async () => {
-    const mockFetch = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
-    vi.stubGlobal("fetch", mockFetch);
-
-    const emailer = new ResendEmailer("re_test_key", FROM);
-    await emailer.sendMagicLink(TO, URL);
-
-    expect(mockFetch).toHaveBeenCalledOnce();
-    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("https://api.resend.com/emails");
-    expect((init.headers as Record<string, string>)["Authorization"]).toBe("Bearer re_test_key");
-    const body = JSON.parse(init.body as string) as Record<string, unknown>;
-    expect(body.to).toBe(TO);
-    expect((body.text as string)).toContain(URL);
-  });
-
-  it("throws on non-2xx response", async () => {
-    const mockFetch = vi.fn().mockResolvedValue(
-      new Response("Unauthorized", { status: 401 }),
-    );
-    vi.stubGlobal("fetch", mockFetch);
-
-    const emailer = new ResendEmailer("bad_key", FROM);
-    await expect(emailer.sendMagicLink(TO, URL)).rejects.toThrow("401");
   });
 });
 
