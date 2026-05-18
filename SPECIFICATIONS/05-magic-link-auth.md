@@ -19,10 +19,12 @@ Adds email-only sign-in via magic links. A user enters their email address, rece
 - [ ] `POST /api/auth/request-link` — validate email, rate-limit (per email + per IP), generate token, store in KV, send magic-link email
 - [ ] `GET /api/auth/verify?token=...` — constant-time token validation, look up or create `leaderboard_profiles` row, set session cookie, redirect to `/`
 - [ ] `POST /api/auth/sign-out` — clear session cookie
+- [ ] CSRF Origin middleware — reject POST requests where `Origin` does not match the site origin; applied to all state-mutating routes (closes TD-010)
 - [ ] Worker middleware: read and verify session cookie, attach `user` to Hono context; `requireUser` helper for protected routes
 - [ ] `POST /api/games` — record authenticated game result to `game_results` + increment `site_stats.total_registered_games` in a single `db.batch()`
+- [ ] `DELETE /api/profile/me` — hard-delete the authenticated user's `leaderboard_profiles` row; `game_results` rows cascade-delete via FK (resolves TD-012)
 - [ ] `Emailer` interface in `src/shared/email/` with `CloudflareEmailer` and `ResendEmailer` implementations and a shared contract test
-- [ ] D1 migration: add `email TEXT NOT NULL UNIQUE` to `leaderboard_profiles`; add UNIQUE index on `display_name`
+- [ ] D1 migration: add `email TEXT NOT NULL UNIQUE` to `leaderboard_profiles`; add UNIQUE index on `display_name`; drop aggregate columns (`total_wins`, `total_losses`, `best_time_seconds`, `best_difficulty`) from `leaderboard_profiles`; add `FOREIGN KEY (user_id) REFERENCES leaderboard_profiles(user_id) ON DELETE CASCADE` to `game_results`
 - [ ] `SignInPage.tsx` — email form + "check your email" confirmation state
 - [ ] `UserMenu` component — "Signed in as [displayName]" indicator + sign-out button, visible in app shell for authenticated users
 - [ ] Anonymous sign-in prompt — link/button in the menu for unauthenticated users to navigate to `SignInPage`
@@ -57,6 +59,8 @@ Adds email-only sign-in via magic links. A user enters their email address, rece
 - [ ] `site_stats.total_registered_games` increments correctly alongside a recorded game result
 - [ ] Anonymous game counter is unaffected by authenticated flows
 - [ ] Switching `EMAIL_PROVIDER` to `resend` sends via Resend with no code changes
+- [ ] All state-mutating POST endpoints return 403 when the `Origin` header is present and does not match the site's origin (TD-010 closed)
+- [ ] An authenticated user can call `DELETE /api/profile/me`; their `leaderboard_profiles` row and all associated `game_results` rows are removed from D1 (TD-012 resolved)
 - [ ] All tests passing, 95%+ coverage, type checking passes
 
 ---
@@ -68,10 +72,12 @@ Adds email-only sign-in via magic links. A user enters their email address, rece
 ```
 User enters email
   → POST /api/auth/request-link
-      rate-limit check (email + IP)
+      normalise: email.trim().toLowerCase()
+      rate-limit check (normalised email + IP)
       generate 256-bit token (crypto.getRandomValues, base64url)
-      KV.put("magic:" + token, JSON({ email }), { expirationTtl: 900 })
-      Emailer.sendMagicLink(email, url)
+      KV.put("magic:" + token, JSON({ email: normalisedEmail }), { expirationTtl: 900 })
+      url = `${APP_URL}/api/auth/verify?token=${token}`  [APP_URL from env]
+      Emailer.sendMagicLink(normalisedEmail, url)
       → 200 { ok: true }
 
 User clicks link: GET /api/auth/verify?token=...
@@ -137,21 +143,63 @@ Phase 8 will extend this with `sendContactNotification`. Both implementations mu
 
 ### D1 schema changes
 
-**Migration file:** `0002_phase5_auth.sql` (Drizzle-generated + manual index SQL)
+**Migration file:** `0002_phase5_auth.sql` (Drizzle-generated + manual SQL for constraints)
 
 Changes to `leaderboard_profiles`:
 - Add `email TEXT NOT NULL UNIQUE` — the user's email address; serves as the account identifier
 - Add `UNIQUE INDEX idx_leaderboard_profiles_display_name` on `display_name`
+- Drop `total_wins`, `total_losses`, `best_time_seconds`, `best_difficulty` — Phase 6 computes these on read from `game_results` via GROUP BY; pre-aggregated columns are unused dead weight now that `game_results` is the source of truth
 
-SQLite does not allow `ADD COLUMN NOT NULL` without a default, so Drizzle will generate a full table rebuild migration (create new table → copy data → drop old → rename). This is safe because the table is empty in production.
+Changes to `game_results`:
+- Add `FOREIGN KEY (user_id) REFERENCES leaderboard_profiles(user_id) ON DELETE CASCADE` — when a profile is deleted, all game results cascade-delete. D1 FK enforcement requires `PRAGMA foreign_keys = ON` per-connection; verify this is enabled in the Drizzle client during implementation.
+
+SQLite does not allow `ADD COLUMN NOT NULL` without a default, so Drizzle will generate a full table rebuild migration for `leaderboard_profiles` (create new → copy → drop old → rename). This is safe because the table is empty in production.
 
 Run `bun run db:generate` after editing `src/db/schema.ts` to produce the migration, then review the generated SQL before committing.
 
-**Drizzle schema additions (`src/db/schema.ts`):**
+**Drizzle schema changes (`src/db/schema.ts`):**
+- Add `email: text("email").notNull().unique()` to `leaderboard_profiles`
+- Add unique index on `displayName`
+- Remove `totalWins`, `totalLosses`, `bestTimeSeconds`, `bestDifficulty` from `leaderboard_profiles`
+- Add FK constraint on `game_results.userId` referencing `leaderboard_profiles.userId` with `ON DELETE CASCADE`
+
+### CSRF protection
+
+All state-mutating POST endpoints (request-link, sign-out, games, profile deletion) check the `Origin` header before processing:
+
+- If `Origin` is present and does not match `APP_URL`, return `403 Forbidden`
+- If `Origin` is absent (non-browser clients): allow — cross-site cookie-bearing requests cannot omit `Origin` in modern browsers, so absence means a legitimate non-browser caller
+- `APP_URL` is the canonical origin from the environment variable (e.g. `https://hnefatafl.hultberg.org`)
+
+Implemented as a Hono middleware in `src/worker/middleware/csrf.ts`, mounted before all state-mutating route handlers. Closes TD-010.
+
+### `POST /api/games` payload
+
+**Request body (JSON):**
+
 ```typescript
-email: text("email").notNull().unique(),
+{
+  playerSide:      'attacker' | 'defender';
+  winnerSide:      'attacker' | 'defender';
+  difficulty:      'thrall' | 'karl' | 'jarl';
+  durationSeconds: number;   // integer, 1–86400
+  moveCount:       number;   // integer, 1–10000
+}
 ```
-Plus a unique index on `displayName` (add to the table constraints array).
+
+**Server-side behaviour:**
+1. CSRF middleware runs first (see above)
+2. `requireUser(c)` — return 401 if not authenticated
+3. Validate payload with Zod schema; return 400 on invalid input
+4. `db.batch([INSERT INTO game_results ..., UPDATE site_stats SET total_registered_games = total_registered_games + 1 ...])`
+5. Return `201 { ok: true }`
+
+**Client integration:**
+- Called from `useGame.ts` (or equivalent hook) when the game ends and the user is authenticated
+- Fire-and-forget in the UI: a failed write logs a console error but does not block the result screen
+- Anonymous users: check auth state client-side before calling; do not trigger a 401 round-trip
+
+**Aggregate strategy:** `leaderboard_profiles` no longer holds pre-aggregated stats after the Phase 5 migration drops those columns. Phase 6's leaderboard query will GROUP BY directly on `game_results`. This is correct at the expected scale; Phase 6 can add a covering index on `game_results(user_id)` if needed.
 
 ### Rate limiting
 
@@ -180,9 +228,11 @@ src/
     routes/
       auth.ts                     # /api/auth/* routes (Hono router)
       games.ts                    # POST /api/games
+      profile.ts                  # DELETE /api/profile/me (account deletion)
     middleware/
       session.ts                  # cookie read + HMAC verify + context attach
       require-user.ts             # requireUser(c) helper
+      csrf.ts                     # Origin check middleware (closes TD-010)
   client/
     pages/
       SignInPage.tsx               # email form + confirmation state
@@ -193,6 +243,8 @@ tests/
   worker/
     auth.test.ts                  # request-link, verify, sign-out routes
     games.test.ts                 # POST /api/games (authenticated + anonymous)
+    profile.test.ts               # DELETE /api/profile/me
+    csrf.test.ts                  # CSRF Origin middleware
   shared/
     email/
       emailer-contract.test.ts    # shared contract for both implementations
@@ -214,6 +266,7 @@ REFERENCE/environment-setup.md      — new secrets + provider switchover playbo
 ```toml
 [vars]
 EMAIL_PROVIDER = "cloudflare"   # override to "resend" via wrangler secret put or .dev.vars
+APP_URL = "https://hnefatafl.hultberg.org"   # override in .dev.vars to http://localhost:5173
 
 # Existing bindings DB and KV already cover Phase 5 needs.
 # Email Sending binding added if Cloudflare Email Sending requires a named binding.
@@ -252,6 +305,15 @@ EMAIL_PROVIDER = "cloudflare"   # override to "resend" via wrangler secret put o
 - Anonymous user posting to `/api/games`: returns 401
 - Invalid payload (missing fields, bad values): returns 400
 
+**`tests/worker/profile.test.ts`**
+- `DELETE /api/profile/me` — authenticated user: profile and game results removed from D1
+- `DELETE /api/profile/me` — unauthenticated: returns 401
+
+**`tests/worker/csrf.test.ts`**
+- POST with matching Origin: passes through
+- POST with mismatched Origin: returns 403
+- POST with no Origin header: passes through (non-browser client)
+
 **`tests/shared/email/emailer-contract.test.ts`**
 - Both `CloudflareEmailer` and `ResendEmailer` satisfy the interface contract (via mocked HTTP)
 - `DevEmailer` logs to console and resolves
@@ -266,6 +328,7 @@ EMAIL_PROVIDER = "cloudflare"   # override to "resend" via wrangler secret put o
 - [ ] Rate limit triggers correctly (5 same-email requests in 1 hour)
 - [ ] Expired link (wait 16 min) shows error
 - [ ] Reused link shows error
+- [ ] Account deletion via `DELETE /api/profile/me` removes profile and all game results from D1
 
 ---
 
@@ -275,6 +338,7 @@ EMAIL_PROVIDER = "cloudflare"   # override to "resend" via wrangler secret put o
 - [ ] `bun run typecheck` — no errors
 - [ ] `bun run test:coverage` — 95%+ lines/functions/statements, 90%+ branches
 - [ ] Manual checklist above completed
+- [ ] Cloudflare Email Sending tested end-to-end in dev before relying on it in production (confirmed accessible and free — verified in account)
 - [ ] `SESSION_SECRET` set in production via `bunx wrangler secret put SESSION_SECRET`
 - [ ] `RESEND_API_KEY` set in production via `bunx wrangler secret put RESEND_API_KEY`
 - [ ] DNS records verified (SPF/DKIM/DMARC for both send paths)
@@ -333,7 +397,8 @@ bun run deploy
 
 ### Security
 
-- **Constant-time token comparison** — use `crypto.subtle.timingSafeEqual` (or equivalent) when comparing KV-retrieved token against request parameter. Prevents timing attacks.
+- **Constant-time session cookie verification** — when verifying the HMAC signature on the session cookie, use `await crypto.subtle.verify('HMAC', key, storedSignature, encodedPayload)` rather than a string comparison. This function is constant-time by design in the Web Crypto API. Note: `crypto.subtle.timingSafeEqual` does not exist in the Workers runtime — it is a Node.js-only API. For the magic-link token, `KV.get("magic:" + token)` is a direct key lookup (not a string comparison), so no timing attack surface applies there.
+- **Email normalisation** — apply `email.trim().toLowerCase()` before all KV lookups, DB queries, and storage. Prevents duplicate accounts from address variants like `User@Example.com` vs `user@example.com`.
 - **Token deletion before DB work** — delete the KV key before creating/looking up the profile row. If the DB write fails after deletion, the user must request a new link. This is safer than leaving a used token in KV while doing DB work.
 - **Session secret rotation** — rotating `SESSION_SECRET` invalidates all active sessions. Document this in the switchover playbook. For a hobby project, this is acceptable; just warn the user in the playbook.
 - **Email enumeration** — `POST /api/auth/request-link` returns the same `{ ok: true }` response regardless of whether the email is known. Never reveal whether an email is registered.
@@ -360,18 +425,18 @@ Accounts introduce email storage and session cookies — the privacy policy must
 - Email is stored (associated with a `leaderboard_profiles` row)
 - A session cookie is set on sign-in (HttpOnly, 90-day persistent)
 - Game results are stored per-user
-- Users can delete their account (Phase 8 scope, but the policy should acknowledge the intent)
+- Users can request account deletion by contacting the admin email (the `DELETE /api/profile/me` endpoint exists but has no UI until Phase 8; the policy should include the admin contact address)
 
 ---
 
 ## Technical debt introduced
 
-**TD-012: No account deletion path in Phase 5**
-- **Location:** `leaderboard_profiles` table, no DELETE route
-- **Issue:** Users cannot remove their account or email from D1
-- **Why accepted:** Account management UI is Phase 8 scope; acceptable for v0.2 given the project is non-commercial
-- **Risk:** Low — acknowledged in the privacy policy
-- **Future fix:** Phase 8 admin panel + a self-service delete endpoint
+**TD-012: No self-service account-deletion UI in Phase 5 (server endpoint added)**
+- **Location:** `DELETE /api/profile/me` route added in Phase 5; no user-facing UI until Phase 8
+- **Issue:** Users can delete their account via a direct API call but there is no "Delete my account" button in the UI. The privacy policy will include a contact address for manual deletion requests in the interim.
+- **Why accepted:** Account-management UI is Phase 8 scope. The server-side endpoint and cascade-delete FK are implemented in Phase 5; the UI gap is minor for a non-commercial hobby project.
+- **Risk:** Low — the deletion path exists; it just requires a direct API call or admin action in Phase 5.
+- **Future fix:** Phase 8 profile page: add a "Delete account" button that calls `DELETE /api/profile/me`.
 
 See [technical-debt.md](../REFERENCE/technical-debt.md) for full tracker.
 
@@ -390,8 +455,12 @@ See [technical-debt.md](../REFERENCE/technical-debt.md) for full tracker.
 | Server-side game validation | Deferred to Phase 6 | Revisit whether needed at all — significant complexity |
 | Turnstile | Dropped | Rate limiting per email + IP is sufficient at this scale; re-add if abuse observed |
 | `is_admin` placement | Stays on `leaderboard_profiles` | Phase 8 admin panel will have an explicit decision point |
-| Username uniqueness | UNIQUE constraint on `display_name`; suffix `_2`/`_3` on collision | Editable in Phase 6 (profile page) |
+| Username uniqueness | UNIQUE constraint on `display_name`; suffix `_2`/`_3` on collision | Editable in Phase 6 (profile page). Suffix approach may surprise users; Phase 6 can revisit with Discord-style `name#id` if collisions become common. |
 | Username source | Email local-part, truncated to 28 chars to allow suffix room | Not editable in Phase 5 |
+| FK on `game_results.user_id` | Hard FK (`REFERENCES leaderboard_profiles(user_id) ON DELETE CASCADE`) | `PRAGMA foreign_keys = ON` required per-connection in D1 — verify during implementation |
+| Aggregate columns | Drop `total_wins`, `total_losses`, `best_time_seconds`, `best_difficulty` from `leaderboard_profiles` in Phase 5 migration | Phase 6 computes aggregates on read from `game_results` via GROUP BY |
+| Account deletion | Hard-delete: profile row + cascade game results | Cleanest for GDPR; no leaderboard history preservation |
+| CSRF protection | Origin check middleware on all state-mutating POSTs | Closes TD-010; returns 403 on mismatch |
 
 ## Prototype references
 
@@ -406,6 +475,6 @@ See [technical-debt.md](../REFERENCE/technical-debt.md) for full tracker.
 - [Root CLAUDE.md](../CLAUDE.md) — project navigation
 - [testing-strategy.md](../REFERENCE/testing-strategy.md) — testing approach and coverage requirements
 - [environment-setup.md](../REFERENCE/environment-setup.md) — secrets, Cloudflare resource setup
-- [technical-debt.md](../REFERENCE/technical-debt.md) — debt tracker (add TD-012 when implementing)
+- [technical-debt.md](../REFERENCE/technical-debt.md) — debt tracker
 - [Phase 4 (archived)](./ARCHIVE/04-d1-schema-and-anonymous-stats.md) — D1 schema reference
 - [Phase 6 (stub)](./06-leaderboard-and-profile.md) — next phase; editable username lives here
