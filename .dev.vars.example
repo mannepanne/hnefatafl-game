@@ -1,0 +1,23 @@
+# Local dev vars — copy this file to .dev.vars and fill in values.
+# .dev.vars is gitignored; this example file is committed.
+#
+# Wrangler auto-loads .dev.vars when running `bun run dev`.
+# Variables here override the [vars] block in wrangler.toml for local dev.
+
+# --- Phase 5: magic-link auth ---
+
+# EMAIL_PROVIDER controls which emailer the Worker uses.
+# "dev" prints the magic-link URL to the Worker console (no email sent).
+# "cloudflare" sends real emails via Cloudflare Email Sending.
+# For local dev, keep this as "dev" — no SMTP setup needed.
+EMAIL_PROVIDER=dev
+
+# APP_URL is used to construct magic-link verify URLs sent in emails.
+# For local dev, point it at the Vite dev server.
+APP_URL=http://localhost:5173
+
+# SESSION_SECRET signs HMAC-SHA256 session cookies.
+# Any long random string works for local dev.
+# In production, set via: bunx wrangler secret put SESSION_SECRET
+# Generate a strong value with: openssl rand -base64 48
+SESSION_SECRET=replace-me-with-a-long-random-string-for-local-dev

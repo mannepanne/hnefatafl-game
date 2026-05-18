@@ -28,4 +28,5 @@ Do **not** try to "fix" the journal to include `0001_site_stats_seed.sql` — Dr
 |---|---|---|
 | `0000_orange_vindicator.sql` | Drizzle-generated | Schema DDL — all three tables with CHECK constraints |
 | `0001_site_stats_seed.sql` | Hand-authored | Seeds the `site_stats` singleton row (idempotent) |
+| `0002_phase5_auth_schema.sql` | Hand-authored | Phase 5 auth — adds `email` to `leaderboard_profiles`, unique index on `display_name`, FK ON DELETE CASCADE on `game_results`; both tables rebuilt using SQLite rename pattern |
 | `meta/_journal.json` | Drizzle-managed | Drizzle diff baseline — do not edit manually |

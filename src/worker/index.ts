@@ -4,10 +4,19 @@
 import { Hono } from "hono";
 import { health } from "./routes/health";
 import { stats } from "./routes/stats";
+import { auth } from "./routes/auth";
+import { csrfMiddleware } from "./middleware/csrf";
+import { sessionMiddleware } from "./middleware/session";
+import type { SessionUser } from "./middleware/session";
 
-const api = new Hono<{ Bindings: Env }>();
+type Variables = { user: SessionUser | null };
+
+const api = new Hono<{ Bindings: Env; Variables: Variables }>();
+api.use("*", sessionMiddleware());
+api.use("*", (c, next) => csrfMiddleware(c.env.APP_URL)(c, next));
 api.route("/", health);
 api.route("/", stats);
+api.route("/", auth);
 
 const app = new Hono<{ Bindings: Env }>();
 app.route("/api", api);
